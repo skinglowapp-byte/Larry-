@@ -1148,6 +1148,7 @@ async function postToDrafts() {
 
   try {
     const mediaIds = [];
+    const mediaUrls = [];
     for (const imgUrl of validImages) {
       // Convert data URL to base64 string for proxy
       const base64 = imgUrl.replace(/^data:image\/png;base64,/, '');
@@ -1156,14 +1157,18 @@ async function postToDrafts() {
         headers: {
           'Content-Type': 'application/json',
           'x-postiz-key': postizKey,
-          'x-postiz-path': '/public/media/upload',
+          'x-postiz-path': '/public/v1/upload',
           'x-content-type': 'multipart'
         },
         body: JSON.stringify({ base64, filename: 'slide.png' })
       });
       const uploadData = await uploadRes.json();
-      if (uploadData.id) mediaIds.push(uploadData.id);
-      else setLog('Media upload: ' + JSON.stringify(uploadData), 'err');
+      if (uploadData.id) {
+        mediaIds.push(uploadData.id);
+        mediaUrls.push(uploadData.path || '');
+      } else {
+        setLog('Media upload: ' + JSON.stringify(uploadData), 'err');
+      }
     }
 
     const postRes = await fetch('/api/postiz', {
@@ -1171,17 +1176,21 @@ async function postToDrafts() {
       headers: {
         'Content-Type': 'application/json',
         'x-postiz-key': postizKey,
-        'x-postiz-path': '/public/posts',
+        'x-postiz-path': '/public/v1/posts',
         'x-content-type': 'application/json'
       },
       body: JSON.stringify({
         type: 'draft',
         date: new Date(Date.now() + 60000).toISOString(),
         shortLink: false,
-        settings: { privacy_level: 'SELF_ONLY' },
-        content: [{
+        tags: [],
+        posts: [{
           integration: { id: channelId },
-          value: [{ content: caption, id: channelId, image: mediaIds.map(id => ({ id })) }]
+          value: [{ 
+            content: caption, 
+            image: mediaIds.map((id, idx) => ({ id, path: mediaUrls[idx] }))
+          }],
+          settings: { __type: 'tiktok', privacy_level: 'SELF_ONLY' }
         }]
       })
     });
