@@ -1,0 +1,2312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="tiktok-developers-site-verification" content="cbojdAGxrgB0Yxw4LR7Jy75b14mn4bej" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Larry — TikTok Slideshow Automator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black: #0e0e0e;
+    --white: #f5f2ec;
+    --cream: #f0ece3;
+    --accent: #c8ff5a;
+    --accent-dark: #a8d940;
+    --muted: #6b6b6b;
+    --border: rgba(255,255,255,0.08);
+    --card-bg: #161616;
+    --input-bg: #1c1c1c;
+    --success: #4ade80;
+    --error: #f87171;
+    --warning: #fbbf24;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--black);
+    color: var(--white);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    font-family: 'Instrument Serif', serif;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+
+  .status-pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .status-pill.connected { border-color: var(--success); color: var(--success); }
+  .status-pill .s-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    min-height: calc(100vh - 65px);
+  }
+
+  /* SIDEBAR */
+  aside {
+    border-right: 1px solid var(--border);
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .sidebar-section {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 14px 12px 6px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--muted);
+    transition: all 0.15s;
+    border: 1px solid transparent;
+    background: none;
+    width: 100%;
+    text-align: left;
+  }
+  .nav-item:hover { color: var(--white); background: rgba(255,255,255,0.04); }
+  .nav-item.active { color: var(--white); background: rgba(255,255,255,0.07); border-color: var(--border); }
+  .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+  .nav-badge {
+    margin-left: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    background: var(--accent);
+    color: var(--black);
+    border-radius: 100px;
+    padding: 1px 7px;
+    font-weight: 500;
+  }
+
+  .api-section {
+    margin-top: auto;
+    padding: 16px;
+    background: var(--card-bg);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .api-section label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 6px; font-family: 'DM Mono', monospace; }
+  .api-section input {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: var(--white);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    margin-bottom: 8px;
+  }
+  .api-section input:focus { outline: none; border-color: rgba(200,255,90,0.4); }
+  .api-section input::placeholder { color: #3a3a3a; }
+
+  /* MAIN */
+  main {
+    padding: 32px;
+    overflow-y: auto;
+    max-height: calc(100vh - 65px);
+    position: relative;
+  }
+
+  .pane { display: none; }
+  .pane.active { display: block; }
+
+  .pane-header {
+    margin-bottom: 28px;
+  }
+  .pane-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 28px;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+  .pane-sub { font-size: 13px; color: var(--muted); }
+
+  /* CARDS */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+
+  .card-title {
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 14px;
+  }
+
+  /* FORM ELEMENTS */
+  label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 5px; }
+  input[type=text], input[type=password], input[type=number], textarea, select {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    margin-bottom: 14px;
+    transition: border-color 0.15s;
+  }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: rgba(200,255,90,0.5); }
+  input::placeholder, textarea::placeholder { color: #333; }
+  textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
+  select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6b6b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+  select option { background: #1c1c1c; }
+
+  .field-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* BUTTONS */
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--black);
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-dark); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--white);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover:not(:disabled) { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.04); }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--error);
+    border: 1px solid rgba(248,113,113,0.2);
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+  .btn-danger:hover { background: rgba(248,113,113,0.07); }
+
+  /* HOOK FORMULA */
+  .formula-box {
+    background: rgba(200,255,90,0.06);
+    border: 1px solid rgba(200,255,90,0.2);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .formula-box .f-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  .formula-box .f-text { color: rgba(245,242,236,0.8); }
+  .formula-box .f-highlight { color: var(--accent); font-weight: 500; }
+
+  /* HOOK LIST */
+  .hook-item {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .hook-item:hover { border-color: rgba(255,255,255,0.15); }
+  .hook-item.selected { border-color: var(--accent); background: rgba(200,255,90,0.04); }
+  .hook-item .hook-text { flex: 1; font-size: 14px; line-height: 1.5; }
+  .hook-item .hook-radio {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 1.5px solid var(--muted);
+    flex-shrink: 0;
+    margin-top: 2px;
+    transition: all 0.15s;
+  }
+  .hook-item.selected .hook-radio { border-color: var(--accent); background: var(--accent); }
+  .hook-est { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+  /* SLIDE PREVIEW */
+  .slides-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .slide-cell {
+    aspect-ratio: 9/16;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #111;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .slide-cell img { width: 100%; height: 100%; object-fit: cover; }
+  .slide-cell .slide-n {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .slide-cell .slide-hook-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    background: rgba(0,0,0,0.35);
+    font-size: 11px;
+    font-weight: 500;
+    text-align: center;
+    line-height: 1.4;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  }
+  .slide-cell .spinner-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .slide-cell .style-tag {
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'DM Mono', monospace;
+    font-size: 8px;
+    background: rgba(0,0,0,0.7);
+    color: rgba(255,255,255,0.7);
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    max-width: 90%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .slide-cell.generating { border-color: rgba(200,255,90,0.3); animation: glow-pulse 1.5s ease-in-out infinite; }
+  @keyframes glow-pulse { 0%,100%{border-color:rgba(200,255,90,0.15)} 50%{border-color:rgba(200,255,90,0.5)} }
+
+  /* SPINNER */
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.1);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  .spinner-sm { width: 12px; height: 12px; border-width: 1.5px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* CAPTION AREA */
+  .caption-preview {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: rgba(245,242,236,0.85);
+    white-space: pre-wrap;
+    min-height: 80px;
+    font-family: 'DM Sans', sans-serif;
+    margin-bottom: 10px;
+  }
+
+  .hashtag { color: var(--accent); }
+
+  /* PROGRESS BAR */
+  .progress-bar-wrap {
+    background: rgba(255,255,255,0.06);
+    border-radius: 100px;
+    height: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 100px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+  .progress-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  /* LOG */
+  .log-box {
+    background: #0a0a0a;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.8;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+  }
+  .log-box .log-ok { color: var(--success); }
+  .log-box .log-err { color: var(--error); }
+  .log-box .log-info { color: var(--accent); }
+
+  /* STYLE TAGS */
+  .styles-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .style-chip {
+    padding: 5px 12px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.15s;
+    background: none;
+  }
+  .style-chip:hover { border-color: rgba(255,255,255,0.2); color: var(--white); }
+  .style-chip.on { border-color: var(--accent); color: var(--accent); background: rgba(200,255,90,0.06); }
+
+  /* PERFORMANCE TABLE */
+  .perf-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .perf-table th { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  .perf-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+  .perf-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .view-count { font-family: 'DM Mono', monospace; font-weight: 500; }
+  .view-count.high { color: var(--accent); }
+  .view-count.mid { color: var(--warning); }
+  .view-count.low { color: var(--muted); }
+  .hook-preview { max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; color: rgba(245,242,236,0.75); }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 9999;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s ease;
+    max-width: 320px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: rgba(74,222,128,0.3); }
+  .toast.error { border-color: rgba(248,113,113,0.3); }
+
+  /* DIVIDER */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  /* POSTIZ CONFIG */
+  .postiz-flow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .flow-step {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .flow-arrow { color: var(--muted); font-size: 16px; }
+
+  .actions-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    aside { display: none; }
+    .slides-row { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    Larry
+    <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);font-style:normal;margin-left:4px;">/ TikTok Slideshow</span>
+  </div>
+
+</header>
+
+<div class="layout">
+  <aside>
+    <div class="sidebar-section">Workflow</div>
+    <button class="nav-item active" onclick="nav('setup')"><span class="icon">⚙</span> Setup</button>
+    <button class="nav-item" onclick="nav('hooks')"><span class="icon">🎣</span> Hook Generator</button>
+    <button class="nav-item" onclick="nav('generate')"><span class="icon">✦</span> Generate Slideshow</button>
+    <button class="nav-item" onclick="nav('accounts')"><span class="icon">👤</span> Accounts</button>
+    <button class="nav-item" onclick="nav('performance')"><span class="icon">📈</span> Performance Log</button>
+
+    <div class="sidebar-section" style="margin-top:8px;">Docs</div>
+    <button class="nav-item" style="font-size:12px;" onclick="openLink('https://postiz.com')"><span class="icon">↗</span> Postiz API docs</button>
+    <button class="nav-item" style="font-size:12px;" onclick="openLink('https://platform.openai.com')"><span class="icon">↗</span> OpenAI platform</button>
+
+  </aside>
+
+  <main>
+  <div style="position:sticky;top:0;z-index:50;background:#0e0e0e;padding:12px 0 10px;margin-bottom:10px;">
+  <div style="background:#161616;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px 18px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+    <div style="flex:1;min-width:180px;">
+      <div style="font-family:DM Mono,monospace;font-size:10px;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">FAL API Key (images)</div>
+      <input type="password" id="fal-key" placeholder="fal key..." oninput="updateStatus()" style="width:100%;background:#1c1c1c;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:9px 12px;color:#f5f2ec;font-family:DM Mono,monospace;font-size:12px;margin:0;" />
+    </div>
+    <div style="flex:1;min-width:180px;">
+      <div style="font-family:DM Mono,monospace;font-size:10px;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">Anthropic Key (hooks &amp; captions)</div>
+      <input type="password" id="anthropic-key" placeholder="sk-ant-..." oninput="updateStatus()" style="width:100%;background:#1c1c1c;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:9px 12px;color:#f5f2ec;font-family:DM Mono,monospace;font-size:12px;margin:0;" />
+    </div>
+    <div style="flex:1;min-width:180px;">
+      <div style="font-family:DM Mono,monospace;font-size:10px;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">Postiz API Key</div>
+      <input type="password" id="postiz-key" placeholder="paste key..." oninput="updateStatus()" style="width:100%;background:#1c1c1c;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:9px 12px;color:#f5f2ec;font-family:DM Mono,monospace;font-size:12px;margin:0;" />
+    </div>
+    <div style="flex:1;min-width:160px;">
+      <div style="font-family:DM Mono,monospace;font-size:10px;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">Postiz Channel ID</div>
+      <input type="text" id="postiz-channel" placeholder="TikTok channel ID..." oninput="updateStatus()" style="width:100%;background:#1c1c1c;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:9px 12px;color:#f5f2ec;font-family:DM Mono,monospace;font-size:12px;margin:0;" />
+    </div>
+    <div id="main-status" style="font-family:DM Mono,monospace;font-size:11px;padding:9px 14px;border-radius:100px;border:1px solid rgba(255,255,255,0.08);color:#6b6b6b;white-space:nowrap;display:flex;align-items:center;gap:6px;"><div style="width:6px;height:6px;border-radius:50%;background:currentColor;"></div>not set</div>
+    <a id="tiktok-connect-btn" href="/api/tiktok-auth" style="padding:9px 16px;border-radius:100px;border:1px solid rgba(255,255,255,0.08);background:none;color:#6b6b6b;font-family:DM Mono,monospace;font-size:11px;white-space:nowrap;text-decoration:none;display:flex;align-items:center;gap:6px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.01-.07z"/></svg>
+      Connect TikTok
+    </a>
+  </div>
+  </div>
+
+    <!-- SETUP PANE -->
+    <div class="pane active" id="pane-setup">
+      <div class="pane-header">
+        <div class="pane-title">App setup</div>
+        <div class="pane-sub">Configure your API keys, app niche, and image architecture</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">App context</div>
+        <div class="field-group">
+          <div>
+            <label>App name</label>
+            <input type="text" id="app-name" placeholder="e.g. Snugly, Aureya..." value="Aureya" />
+          </div>
+          <div>
+            <label>App category</label>
+            <select id="app-category">
+              <option value="home">Home design / renovation</option>
+              <option value="beauty" selected>Beauty & skincare</option>
+              <option value="fashion">Fashion & style</option>
+              <option value="fitness">Fitness & wellness</option>
+              <option value="food">Food & recipes</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+        <label>App one-liner</label>
+        <input type="text" id="app-oneliner" placeholder="e.g. AI-powered room redesign using a photo of your room" value="AI-powered skincare routine builder that analyses your skin and recommends products for sensitive, eczema-prone and rosacea skin" />
+        <label>Target audience</label>
+        <input type="text" id="app-audience" placeholder="e.g. UK renters aged 20-35 who can't renovate" value="Women aged 18-40 with sensitive, eczema-prone or rosacea skin who are overwhelmed by skincare and scared of reactions" />
+      </div>
+
+      <div class="card">
+        <div class="card-title">Image architecture (locked across all 6 slides)</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6;">
+          This is the room/subject description that stays <em>identical</em> in every prompt. Only the style changes per slide. Be obsessively specific — window positions, dimensions, camera angle, lighting.
+        </div>
+        <label>Locked architecture description</label>
+        <textarea id="arch-desc" rows="5" placeholder="e.g. iPhone photo of a small UK rental kitchen...">Extreme macro close-up portrait of a woman in her late 20s, hyperrealistic, ultra-detailed skin texture, visible large pores, fine peach fuzz facial hair, natural sebum and oily sheen on forehead cheeks and nose, natural imperfections, blemishes, subtle freckles, photorealistic, cinematic macro photography, shot on Arri Alexa 65, 8k resolution, raw photo, no makeup, natural soft window light with soft shadows, centre-framed looking directly at camera, shallow depth of field background blurred, portrait orientation 9:16.</textarea>
+        <label>"Before" slide extras (signs of life)</label>
+        <input type="text" id="before-extras" placeholder="e.g. a flat screen TV, mugs on the counter..." value="a half-used tube of cream on the bathroom counter, a glass of water nearby, slight redness visible on cheeks and nose" />
+      </div>
+
+      <div class="card">
+        <div class="card-title">Style variants (6 slides)</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">Define the style for each of the 6 slides. Slide 1 is typically the "before" state.</div>
+        <div id="styles-container"></div>
+        <button class="btn btn-ghost" style="font-size:12px;" onclick="resetStyles()">↺ Reset to defaults</button>
+      </div>
+
+      <button class="btn btn-primary" onclick="nav('hooks')">Continue to hooks →</button>
+    </div>
+
+    <!-- HOOKS PANE -->
+    <div class="pane" id="pane-hooks">
+      <div class="pane-header">
+        <div class="pane-title">Hook generator</div>
+        <div class="pane-sub">The formula that drives 100K+ views</div>
+      </div>
+
+      <div class="formula-box">
+        <div class="f-label">Larry's proven formula</div>
+        <div class="f-text">
+          <span class="f-highlight">[Another person]</span> + <span class="f-highlight">[conflict or doubt]</span> → showed them AI → they changed their mind.<br/>
+          <span style="font-size:12px;color:rgba(245,242,236,0.5);">Every post following this formula clears 50K minimum. Most clear 100K+.</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Generate hooks with Claude</div>
+        <label>Niche / context for hook generation</label>
+        <textarea id="hook-context" rows="2" placeholder="Pulls from your setup automatically..." readonly style="color:var(--muted);font-size:13px;"></textarea>
+        <label>Number of hooks to generate</label>
+        <select id="hook-count">
+          <option value="5">5 hooks</option>
+          <option value="10" selected>10 hooks</option>
+          <option value="15">15 hooks</option>
+        </select>
+        <button class="btn btn-primary" onclick="generateHooks()" id="hook-btn">
+          <span id="hook-btn-inner">✦ Generate hooks with Claude</span>
+        </button>
+      </div>
+
+      <div id="hooks-list" style="margin-top:16px;"></div>
+
+      <div id="selected-hook-card" style="display:none;" class="card" style="margin-top:16px;">
+        <div class="card-title">Selected hook</div>
+        <div id="selected-hook-text" style="font-size:16px;font-weight:500;line-height:1.5;margin-bottom:12px;"></div>
+        <button class="btn btn-primary" onclick="nav('generate')">Use this hook → Generate slideshow</button>
+      </div>
+    </div>
+
+    <!-- GENERATE PANE -->
+    <div class="pane" id="pane-generate">
+      <div class="pane-header">
+        <div class="pane-title">Generate slideshow</div>
+        <div class="pane-sub">6 slides · portrait · locked architecture · hook on slide 1</div>
+      </div>
+
+      <div class="card" id="account-select-card">
+        <div class="card-title">Select account to generate for</div>
+        <div id="account-selector" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+        <div id="no-account-msg" style="font-size:13px;color:var(--muted);display:none;">No accounts set up yet — add accounts in the Accounts tab first.</div>
+        <div id="selected-char-preview" style="display:none;margin-top:12px;display:flex;align-items:center;gap:12px;">
+          <img id="selected-char-img" style="width:48px;height:64px;object-fit:cover;border-radius:6px;border:1.5px solid var(--accent);" />
+          <div>
+            <div id="selected-account-name" style="font-size:14px;font-weight:500;"></div>
+            <div style="font-size:11px;color:var(--muted);">Character locked — all slides will use this face</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Slide content</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Claude will decide the best mix of image types and text for each slide based on your hook.</div>
+        <label>Hook (Slide 1)</label>
+        <input type="text" id="gen-hook" placeholder="Paste or type your hook..." />
+        <button class="btn btn-ghost" style="font-size:12px;margin-top:4px;" onclick="generateSlideTexts()">✦ Auto-plan all 6 slides with Claude</button>
+        <div id="slide-plan-preview" style="display:none;margin-top:12px;"></div>
+        <div class="card-title" style="margin-top:16px;">Caption style</div>
+        <select id="caption-style">
+          <option value="story">Story-style (natural, 1st person)</option>
+          <option value="question">Question hook</option>
+          <option value="listicle">Short listicle</option>
+        </select>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Slide preview</div>
+        <div class="slides-row" id="slides-preview-row"></div>
+        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="gen-progress"></div></div>
+        <div class="progress-label" id="gen-progress-label">Ready to generate</div>
+        <div class="log-box" id="gen-log">Waiting...</div>
+        <div class="actions-row">
+          <button class="btn btn-primary" id="gen-btn-main" onclick="generateSlideshow()">✦ Generate all 6 slides</button>
+          <button class="btn btn-ghost" id="caption-btn" onclick="generateCaption()" disabled>Generate caption</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Bulk generate</div>
+        <div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:14px;line-height:1.6;">Generate multiple slideshows at once using different hooks. Each downloads as a separate folder. Perfect for posting across 4+ accounts.</div>
+        <label>Number of slideshows to generate</label>
+        <select id="bulk-count">
+          <option value="1">1 slideshow</option>
+          <option value="3">3 slideshows</option>
+          <option value="5">5 slideshows</option>
+          <option value="10">10 slideshows</option>
+        </select>
+        <label>Hook bank (one per line — leave empty to auto-generate)</label>
+        <textarea id="bulk-hooks" rows="5" placeholder="My dermatologist told me to stop buying random products...&#10;I showed my mum what AI recommended for my rosacea...&#10;My skin was flaring every week until I did this..."></textarea>
+        <button class="btn btn-primary" onclick="bulkGenerate()" id="bulk-btn" style="width:100%;">✦ Bulk generate slideshows</button>
+        <div id="bulk-progress" style="margin-top:12px;display:none;">
+          <div class="progress-bar-wrap"><div class="progress-bar-fill" id="bulk-progress-bar"></div></div>
+          <div class="progress-label" id="bulk-progress-label">Starting...</div>
+          <div class="log-box" id="bulk-log" style="max-height:120px;"></div>
+        </div>
+      </div>
+
+      <div class="card" id="caption-card" style="display:none;">
+        <div class="card-title">Caption + hashtags</div>
+        <div class="caption-preview" id="caption-output"></div>
+        <div class="actions-row">
+          <button class="btn btn-primary" onclick="downloadAllSlides()" id="post-btn">↓ Download all 6 slides</button>
+          <button class="btn btn-ghost" onclick="copyCaption()">Copy caption</button>
+          <button class="btn btn-ghost" onclick="downloadAllSlides()">Download slides</button>
+          <button class="btn btn-ghost" onclick="generateCaption()">Regenerate</button>
+        </div>
+      </div>
+
+      <div class="card" id="draft-success-card" style="display:none;">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;">Next steps — 60 seconds</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(200,255,90,0.15);border:1px solid rgba(200,255,90,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#c8ff5a;flex-shrink:0;">1</div>
+            <div style="font-size:13px;line-height:1.5;">Open TikTok app → tap <strong style="color:#f5f2ec;">+</strong> → select <strong style="color:#f5f2ec;">Photo</strong> → upload all 6 downloaded slides in order</div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(200,255,90,0.15);border:1px solid rgba(200,255,90,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#c8ff5a;flex-shrink:0;">2</div>
+            <div style="font-size:13px;line-height:1.5;">Add a <strong style="color:#f5f2ec;">trending sound</strong> — this is the key step. Browse trending sounds and pick one that fits</div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(200,255,90,0.15);border:1px solid rgba(200,255,90,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#c8ff5a;flex-shrink:0;">3</div>
+            <div style="font-size:13px;line-height:1.5;">Paste your caption (already copied) → hit <strong style="color:#f5f2ec;">Post</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACCOUNTS PANE -->
+    <div class="pane" id="pane-accounts">
+      <div class="pane-header">
+        <div class="pane-title">Connected accounts</div>
+        <div class="pane-sub">Connect multiple TikTok accounts to post across all of them</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Add account + character</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Each account gets its own unique AI character. Generate a character first, then connect the TikTok account. Every slideshow for this account will use the same consistent face.</div>
+        
+        <label>Account nickname</label>
+        <input type="text" id="account-label" placeholder="e.g. Aureya Main, Skin Account 2..." />
+        
+        <label>Character description</label>
+        <input type="text" id="character-desc" placeholder="e.g. woman in her late 20s, auburn hair, green eyes, light skin with freckles" />
+        
+        <label>Skin type for this character</label>
+        <select id="character-skin">
+          <option value="rosacea">Rosacea-prone skin</option>
+          <option value="eczema">Eczema-prone skin</option>
+          <option value="both">Both rosacea and eczema</option>
+          <option value="sensitive">General sensitive skin</option>
+        </select>
+
+        <div style="display:flex;gap:10px;margin-top:4px;">
+          <button onclick="generateCharacter()" id="gen-char-btn" class="btn btn-primary" style="flex:1;">✦ Generate character</button>
+        </div>
+
+        <div id="char-preview" style="display:none;margin-top:14px;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-family:DM Mono,monospace;">GENERATED CHARACTER — will be used for all slides</div>
+          <img id="char-preview-img" style="width:120px;height:160px;object-fit:cover;border-radius:var(--border-radius-md);border:2px solid var(--accent);" />
+          <div style="font-size:12px;color:var(--accent);margin-top:6px;">✓ Character locked — save account to use this face</div>
+          <button onclick="saveCharacterToAccount()" class="btn btn-primary" style="width:100%;margin-top:10px;">Save account with this character</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Connected accounts</div>
+        <div id="accounts-list"></div>
+        <div id="no-accounts" style="font-size:13px;color:var(--muted);text-align:center;padding:20px;">No accounts connected yet. Add your first account above.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Post to all accounts</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6;">After generating a slideshow, select which accounts to post to. Each account will receive the same slides with the same caption as a draft — then open TikTok on each device to add trending sound and publish.</div>
+        <div id="post-to-accounts-list" style="margin-bottom:14px;"></div>
+        <button class="btn btn-primary" onclick="postToSelectedAccounts()" id="multi-post-btn" style="width:100%;" disabled>↑ Download for selected accounts</button>
+      </div>
+    </div>
+
+    <!-- PERFORMANCE PANE -->
+    <div class="pane" id="pane-performance">
+      <div class="pane-header">
+        <div class="pane-title">Performance log</div>
+        <div class="pane-sub">Track what works. Every lesson becomes a rule.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Log a post result</div>
+        <div class="field-group">
+          <div>
+            <label>Hook used</label>
+            <input type="text" id="log-hook" placeholder="The hook text..." />
+          </div>
+          <div>
+            <label>Views</label>
+            <input type="number" id="log-views" placeholder="e.g. 234000" />
+          </div>
+        </div>
+        <label>Lesson learned (optional)</label>
+        <input type="text" id="log-lesson" placeholder="e.g. landlord conflict hooks outperform feature hooks by 20x" />
+        <button class="btn btn-primary" onclick="logPerformance()">Log result</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Post history</div>
+        <table class="perf-table">
+          <thead>
+            <tr>
+              <th>Hook</th>
+              <th>Views</th>
+              <th>Formula?</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="perf-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let selectedHook = '';
+let generatedImages = [];
+let performanceLogs = JSON.parse(localStorage.getItem('larry_logs') || '[]');
+let styleVariants = [
+  { label: 'Before (flare state)', style: 'Active rosacea and eczema flare. Intense redness and inflammation across cheeks and nose, visibly irritated and reactive skin, dry flaking patches, broken capillaries visible under skin, slight swelling around eyes, skin looks raw and uncomfortable. Glistening moisture from irritated skin. Ultra-detailed pores, every imperfection visible. No makeup whatsoever.' },
+  { label: 'Week 1 — calming', style: 'Early improvement from active flare. Redness slightly reduced but still very present, flaking subsiding, skin still reactive and sensitive. Visible pores, natural skin oils beginning to balance. Slight relief visible in expression — skin less angry. Ultra-detailed skin texture, every pore and blemish visible, raw unedited.' },
+  { label: 'Week 2 — settling', style: 'Meaningful improvement. Redness reduced to patches rather than full flush, dry areas mostly healed, skin texture more even. Natural sebum balanced, pores visible but less inflamed. Slight healthy moisture returning. Real skin texture — freckles, fine lines, pores all visible. No retouching.' },
+  { label: 'Week 3 — clearer', style: 'Clear skin emerging. Only faint redness remains on nose bridge, overall tone much more even, texture noticeably smoother. Natural healthy glow beginning — from hydration not oil. Every pore still visible, peach fuzz on skin, subtle freckles. Looks genuinely better, not edited better.' },
+  { label: 'Week 4 — glowing', style: 'Calm healthy skin with visible texture. Even skin tone, no active inflammation, natural luminosity. Ultra-detailed: every pore, fine line, and freckle visible. Natural sebum sheen — healthy not oily. Real skin, real texture, real person. Soft diffused glow.' },
+  { label: 'After — transformed', style: 'Radiant calm skin, completely settled. Even luminous tone, no redness or irritation. Ultra-detailed natural skin texture intact — pores, peach fuzz, natural freckles all visible. This is what genuinely healthy sensitive skin looks like — not airbrushed perfection but real healthy skin. Photorealistic, believable, beautiful.' },
+];
+
+// ─── NAV ─────────────────────────────────────────────────────────────────────
+function nav(name) {
+  document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('pane-' + name).classList.add('active');
+  const navItems = document.querySelectorAll('.nav-item');
+  const map = { setup: 0, hooks: 1, generate: 2, accounts: 3, performance: 4 };
+  const idx = map[name]; if (idx !== undefined && idx >= 0 && navItems[idx]) navItems[idx].classList.add('active');
+  if (name === 'hooks') syncHookContext();
+  if (name === 'generate') { syncGenHook(); renderSlidePreviewPlaceholders(); renderAccountSelector(); }
+  if (name === 'performance') renderPerfTable();
+}
+
+// ─── KEYS & STATUS ────────────────────────────────────────────────────────────
+function getFalKey() { const el = document.getElementById('fal-key'); return el ? el.value.trim() : ''; }
+function getOpenAIKey() { return getFalKey(); }
+function getAnthropicKey() { return document.getElementById('anthropic-key').value.trim(); }
+function getPostizKey() { return document.getElementById('postiz-key').value.trim(); }
+function getPostizChannel() { return document.getElementById('postiz-channel').value.trim(); }
+
+function updateStatus() {
+  const oai = getFalKey();
+  const pz = getPostizKey();
+  const ch = getPostizChannel();
+  const ant = getAnthropicKey();
+  if (oai) localStorage.setItem('larry_fal', oai);
+  if (ant) localStorage.setItem('larry_ant', ant);
+  if (pz) localStorage.setItem('larry_pz', pz);
+  if (ch) localStorage.setItem('larry_ch', ch);
+  const el = document.getElementById('main-status');
+  if (oai && pz && getAnthropicKey()) {
+    el.innerHTML = '<div style="width:6px;height:6px;border-radius:50%;background:currentColor;"></div>Ready';
+    el.style.color = '#4ade80';
+    el.style.borderColor = 'rgba(74,222,128,0.3)';
+  } else {
+    el.innerHTML = '<div style="width:6px;height:6px;border-radius:50%;background:currentColor;"></div>Keys needed';
+    el.style.color = '#6b6b6b';
+    el.style.borderColor = 'rgba(255,255,255,0.08)';
+  }
+}
+
+function loadSavedKeys() {
+  const oai = localStorage.getItem('larry_fal');
+  const pz = localStorage.getItem('larry_pz');
+  const ch = localStorage.getItem('larry_ch');
+  const ant = localStorage.getItem('larry_ant');
+  const falEl = document.getElementById('fal-key'); if (falEl && oai) { falEl.value = oai; }
+  if (ant) document.getElementById('anthropic-key').value = ant;
+  if (pz) document.getElementById('postiz-key').value = pz;
+  if (ch) document.getElementById('postiz-channel').value = ch;
+  updateStatus();
+}
+
+// ─── SETUP ────────────────────────────────────────────────────────────────────
+function renderStyleInputs() {
+  const c = document.getElementById('styles-container');
+  c.innerHTML = '';
+  styleVariants.forEach((v, i) => {
+    c.innerHTML += `
+      <div style="margin-bottom:14px;">
+        <label>Slide ${i + 1} — ${v.label}</label>
+        <textarea rows="2" oninput="styleVariants[${i}].style=this.value">${v.style}</textarea>
+      </div>`;
+  });
+}
+
+function resetStyles() {
+  styleVariants = [
+    { label: 'Before (flare state)', style: 'Visibly irritated skin. Redness across cheeks and nose, dry flaky patches, slight swelling around the eyes. Looks uncomfortable and inflamed. Relatable, not dramatic.' },
+    { label: 'Week 1 — calming', style: 'Skin slightly calmer. Redness beginning to reduce, less flaking, still uneven tone. Hydration starting to show. Early improvement, subtle.' },
+    { label: 'Week 2 — settling', style: 'Noticeably less inflammation. Cheeks less red, skin looks more hydrated and plump. Some uneven patches remain but overall calmer.' },
+    { label: 'Week 3 — clearer', style: 'Clear improvement. Redness mostly gone, skin texture smoother, tone more even. Natural healthy glow beginning to show.' },
+    { label: 'Week 4 — glowing', style: 'Calm, clear, even-toned skin. Natural glow, no visible redness or irritation. Hydrated and healthy-looking. Realistic, not airbrushed.' },
+    { label: 'After — transformed', style: 'Completely calm skin. Soft, even, luminous. No redness, no dryness, no irritation. Realistic and radiant.' },
+  ];
+  renderStyleInputs();
+}
+renderStyleInputs();
+
+// ─── HOOKS ────────────────────────────────────────────────────────────────────
+function syncHookContext() {
+  const name = document.getElementById('app-name').value || '[app name]';
+  const cat = document.getElementById('app-category').value;
+  const ol = document.getElementById('app-oneliner').value || '[app description]';
+  const aud = document.getElementById('app-audience').value || '[target audience]';
+  document.getElementById('hook-context').value = `App: ${name} — ${ol}\nAudience: ${aud}\nCategory: ${cat}`;
+}
+
+async function generateHooks() {
+  const btn = document.getElementById('hook-btn');
+  const inner = document.getElementById('hook-btn-inner');
+  btn.disabled = true;
+  inner.innerHTML = '<div class="spinner spinner-sm"></div> Generating...';
+
+  const count = document.getElementById('hook-count').value;
+  const context = document.getElementById('hook-context').value;
+
+  const prompt = `You are a viral TikTok content strategist specialising in sensitive skincare content for eczema and rosacea sufferers.
+
+Your proven hook formula: [Another person] + [conflict or doubt] → showed them something → they changed their mind or were shocked.
+
+High-performing hook patterns for this niche:
+1. Sceptic converted: "My dermatologist told me to stop buying random products so I let AI build my routine instead"
+2. Reaction hook: "I showed my mum what AI recommended for my rosacea and she threw out her entire bathroom shelf"  
+3. Frustration release: "My skin was flaring every single week until I stopped guessing and did this instead"
+4. Before/after tease: "This is what 4 weeks of AI-built skincare looks like on eczema skin"
+5. Relatable struggle: "I spent £400 on skincare that made my rosacea worse until a stranger told me about this"
+6. Challenge hook: "My boyfriend said AI couldn't fix my skin. I showed him my week 4 results"
+
+Rules:
+- Speak directly to eczema/rosacea sufferers — mention their specific struggle
+- Create a tiny story in the viewer's head before they even swipe
+- Never mention app features, prices, or benefits directly
+- No medical claims about curing conditions
+- Use British English spellings
+- Make it feel like something a real person would say to a friend
+- Vary the hook type across your ${count} hooks — don't repeat the same pattern
+
+App context:
+${context}
+
+Generate ${count} unique hooks. Return ONLY a JSON array of strings. No preamble, no markdown. Example: ["hook 1","hook 2"]`;
+
+  try {
+    const res = await fetch('/api/claude', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-anthropic-key': getAnthropicKey()
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+    const text = data.content?.[0]?.text || '[]';
+    const hooks = JSON.parse(text.replace(/```json|```/g, '').trim());
+    renderHooks(hooks);
+  } catch (e) {
+    showToast('Error generating hooks: ' + e.message, 'error');
+  }
+  btn.disabled = false;
+  inner.innerHTML = '✦ Generate hooks with Claude';
+}
+
+function renderHooks(hooks) {
+  const list = document.getElementById('hooks-list');
+  list.innerHTML = `<div class="card-title" style="margin-bottom:12px;">Pick a hook (${hooks.length} generated)</div>`;
+  hooks.forEach((h) => {
+    const hasFormula = /dermatologist|mum|mom|partner|flatmate|friend|sister|boyfriend|girlfriend|wife|husband|parent|dad|showed|stopped/i.test(h);
+    const div = document.createElement('div');
+    div.className = 'hook-item';
+    div.innerHTML = `
+      <div class="hook-radio"></div>
+      <div>
+        <div class="hook-text">${h}</div>
+        <div class="hook-est">${hasFormula ? '✓ follows the formula · est. 50K–200K views' : '⚠ may not follow formula'}</div>
+      </div>`;
+    div.onclick = () => selectHook(h, div);
+    list.appendChild(div);
+  });
+}
+
+function selectHook(hook, el) {
+  document.querySelectorAll('.hook-item').forEach(i => i.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedHook = hook;
+  document.getElementById('selected-hook-text').textContent = hook;
+  document.getElementById('selected-hook-card').style.display = 'block';
+}
+
+function syncGenHook() {
+  if (selectedHook) document.getElementById('gen-hook').value = selectedHook;
+}
+
+// ─── GENERATE SLIDESHOW (OpenAI gpt-image-1) ──────────────────────────────────
+function renderSlidePreviewPlaceholders() {
+  const row = document.getElementById('slides-preview-row');
+  row.innerHTML = '';
+  for (let i = 0; i < 6; i++) {
+    row.innerHTML += `
+      <div class="slide-cell" id="slide-cell-${i}">
+        <div class="slide-n">${i + 1}</div>
+        <div class="spinner-wrap" style="color:var(--muted);font-size:10px;font-family:'DM Mono',monospace;text-align:center;">
+          <div style="font-size:20px;margin-bottom:6px;opacity:0.2">✦</div>
+          ${styleVariants[i]?.label || 'Style ' + (i + 1)}
+        </div>
+      </div>`;
+  }
+}
+renderSlidePreviewPlaceholders();
+
+function setLog(msg, type = '') {
+  const box = document.getElementById('gen-log');
+  const span = document.createElement('div');
+  span.className = type ? `log-${type}` : '';
+  span.textContent = '> ' + msg;
+  box.appendChild(span);
+  box.scrollTop = box.scrollHeight;
+}
+
+function setProgress(pct, label) {
+  document.getElementById('gen-progress').style.width = pct + '%';
+  document.getElementById('gen-progress-label').textContent = label;
+}
+
+async function trainLoRA(accountIndex) {
+  const acc = connectedAccounts[accountIndex];
+  if (!acc?.characterUrl) { showToast('No character image to train from', 'error'); return; }
+
+  const falKey = getFalKey();
+  if (!falKey) { showToast('Add your FAL API key', 'error'); return; }
+
+  const btn = document.getElementById(`lora-btn-${accountIndex}`);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Submitting...'; }
+
+  try {
+    // Generate 5 variations of the character first for training data
+    showToast('Generating training images for LoRA...', '');
+    const trainingImages = [acc.characterUrl];
+
+    // Generate 4 more variations using IP-Adapter
+    for (let v = 0; v < 4; v++) {
+      const angles = [
+        'looking slightly left, 3/4 angle',
+        'looking slightly right, 3/4 angle',
+        'looking directly at camera, slight smile',
+        'looking slightly down, contemplative expression'
+      ];
+      const res = await fetch('/api/fal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-fal-key': falKey },
+        body: JSON.stringify({
+          endpoint: 'fal-ai/flux-general',
+          input: {
+            prompt: `Extreme macro close-up portrait, ${acc.desc || 'woman'}, ${angles[v]}, hyperrealistic, ultra-detailed skin texture, photorealistic, cinematic macro photography, 8k resolution, raw photo, no makeup, natural soft window light`,
+            image_size: { width: 1024, height: 1024 },
+            num_inference_steps: 20,
+            guidance_scale: 3.2,
+            num_images: 1,
+            output_format: 'jpeg',
+            loras: [{ path: 'https://huggingface.co/XLabs-AI/flux-RealismLora/resolve/main/lora.safetensors', scale: 0.85 }],
+            ip_adapter: [{ path: 'https://huggingface.co/XLabs-AI/flux-ip-adapter/resolve/main/ip_adapter.safetensors', image_url: acc.characterUrl, scale: 0.85 }]
+          }
+        })
+      });
+      const data = await res.json();
+      if (data.images?.[0]?.url) trainingImages.push(data.images[0].url);
+    }
+
+    showToast(`Training LoRA with ${trainingImages.length} images — takes ~20 mins`, '');
+
+    // Submit LoRA training to fal.ai
+    const trainRes = await fetch('/api/fal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-fal-key': falKey },
+      body: JSON.stringify({
+        endpoint: 'fal-ai/flux-lora-fast-training',
+        input: {
+          images_data_url: trainingImages[0],
+          trigger_word: `${acc.label.replace(/\s+/g, '_').toLowerCase()}_person`,
+          steps: 1000,
+          learning_rate: 0.0001,
+          multiresolution_training: true
+        }
+      })
+    });
+
+    const trainData = await trainRes.json();
+
+    if (trainData.diffusers_lora_file?.url || trainData.lora_file?.url) {
+      const loraPath = trainData.diffusers_lora_file?.url || trainData.lora_file?.url;
+      connectedAccounts[accountIndex].loraPath = loraPath;
+      connectedAccounts[accountIndex].loraTrigger = `${acc.label.replace(/\s+/g, '_').toLowerCase()}_person`;
+      connectedAccounts[accountIndex].loraTraining = false;
+      saveAccounts();
+      renderAccounts();
+      showToast(`LoRA trained for ${acc.label}!`, 'success');
+    } else {
+      // Training submitted but async - mark as in progress
+      connectedAccounts[accountIndex].loraTraining = true;
+      saveAccounts();
+      renderAccounts();
+      showToast('LoRA training submitted — check back in ~20 minutes', '');
+    }
+  } catch(e) {
+    showToast('Training error: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ Train LoRA'; }
+  }
+}
+
+function buildFalBody(prompt, negativePrompt, slideType) {
+  const acc = selectedAccountIndex !== null ? connectedAccounts[selectedAccountIndex] : null;
+  const charUrl = acc?.characterUrl || null;
+  const useFaceConsistency = slideType === 'face' || slideType === 'skin';
+  
+  const falInput = {
+    prompt,
+    negative_prompt: negativePrompt,
+    image_size: { width: 1024, height: 1536 },
+    num_inference_steps: 28,
+    guidance_scale: 3.2,
+    num_images: 1,
+    output_format: 'png',
+    scheduler: 'dpmpp_2m',
+    loras: [
+      { path: 'https://huggingface.co/XLabs-AI/flux-RealismLora/resolve/main/lora.safetensors', scale: 0.85 },
+      { path: 'https://huggingface.co/Shakker-Labs/FLUX.1-dev-LoRA-add-details/resolve/main/FLUX-dev-lora-add_details.safetensors', scale: 0.4 }
+    ]
+  };
+
+  if (useFaceConsistency) {
+    if (acc?.loraPath) {
+      falInput.loras.push({ path: acc.loraPath, scale: 0.9 });
+      falInput.prompt = `${acc.loraTrigger || ''} ${prompt}`;
+    } else if (charUrl) {
+      falInput.ip_adapter = [{ path: 'https://huggingface.co/XLabs-AI/flux-ip-adapter/resolve/main/ip_adapter.safetensors', image_url: charUrl, scale: 0.8 }];
+    }
+  }
+  return JSON.stringify({ endpoint: 'fal-ai/flux-general', input: falInput });
+}
+
+async function generateSlideshow() {
+  const oaiKey = getFalKey();
+  if (!oaiKey) { showToast('Add your FAL API key in the Setup tab', 'error'); return; }
+
+  const hook = document.getElementById('gen-hook').value.trim();
+  if (!hook) { showToast('Enter a hook for slide 1', 'error'); return; }
+
+  const arch = document.getElementById('arch-desc').value.trim();
+  if (!arch) { showToast('Add your architecture description in Setup', 'error'); return; }
+
+  const btn = document.getElementById('gen-btn-main');
+  btn.disabled = true;
+  generatedImages = [];
+  document.getElementById('gen-log').innerHTML = '';
+  document.getElementById('caption-card').style.display = 'none';
+  document.getElementById('draft-success-card').style.display = 'none';
+  document.getElementById('caption-btn').disabled = true;
+
+  setProgress(0, 'Starting generation...');
+  setLog('Generating 6 slides with locked architecture...', 'info');
+
+  for (let i = 0; i < 6; i++) {
+    const cell = document.getElementById(`slide-cell-${i}`);
+    cell.classList.add('generating');
+    cell.innerHTML = `<div class="slide-n">${i + 1}</div><div class="spinner-wrap"><div class="spinner"></div><div style="font-size:9px;color:var(--muted);margin-top:6px;font-family:'DM Mono',monospace;">generating...</div></div>`;
+
+    const variant = styleVariants[i];
+    const isFirst = i === 0;
+    const beforeExtras = document.getElementById('before-extras').value.trim();
+    const styleDesc = isFirst
+      ? variant.style + (beforeExtras ? ` Including everyday items: ${beforeExtras}.` : '')
+      : variant.style;
+    const negativePrompt = 'smooth plastic skin, airbrushed, perfect flawless skin, cartoon, anime, illustration, painting, drawing, lowres, blurry, deformed, bad anatomy, extra limbs, watermark, logo, signature, overexposed, underexposed, makeup, heavy eyeliner, lipstick, filters, instagram style, beauty retouch, doll-like, CGI, 3d render, plastic, shiny plastic';
+
+    // Use Claude's slide plan if available, otherwise default to face
+    const planEntry = slidePlan[i] || { type: 'face', text: '' };
+    const slideType = planEntry.type || 'face';
+    const acc = selectedAccountIndex !== null ? connectedAccounts[selectedAccountIndex] : null;
+    
+    let fullPrompt;
+    if (slideType === 'face') {
+      fullPrompt = `${arch} ${styleDesc} hyperrealistic, ultra-detailed skin texture, visible large pores, natural imperfections, photorealistic, cinematic macro photography, 8k resolution, raw photo.`;
+    } else if (slideType === 'skin') {
+      fullPrompt = `Extreme macro close-up of human facial skin, ${styleDesc} visible large pores, fine peach fuzz, glistening moisture, natural skin texture, redness and imperfections, photorealistic, shot on Arri Alexa 65, 8k resolution, raw photo, natural bathroom lighting, no makeup, ultra-detailed dermatological photography.`;
+    } else if (slideType === 'product') {
+      const productStyles = [
+        'minimalist white background, professional product photography, glass serum dropper bottle with clear golden liquid, soft diffused studio lighting, luxury skincare aesthetic',
+        'moisturizer cream jar open on marble surface, creamy white texture, soft window light, clean minimal aesthetic, beauty product photography',
+        'skincare routine flatlay on white linen, gentle toner bottle and moisturizer, natural daylight, clean and calm aesthetic',
+        'close-up of serum dropper dispensing a single drop, golden amber liquid, macro product photography, white background, luxury beauty',
+        'facial oil bottle with dropper on bathroom shelf, warm bathroom lighting, lifestyle product photography, calm minimalist aesthetic'
+      ];
+      fullPrompt = `${productStyles[i % productStyles.length]}, photorealistic, 8k resolution, no text, no labels.`;
+    } else if (slideType === 'app') {
+      fullPrompt = `iPhone 15 Pro mockup showing a skincare app interface with AI skin analysis, skin score dashboard, personalized routine recommendations for sensitive skin, clean modern UI, white and soft green color scheme, floating on white background, professional app store screenshot style, photorealistic phone mockup.`;
+    }
+
+    setLog(`Slide ${i + 1}: ${variant.label}...`);
+
+    try {
+      const falKey = getFalKey();
+      const res = await fetch('/api/fal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-fal-key': falKey },
+        body: buildFalBody(fullPrompt, negativePrompt, slideType)
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        const errMsg = typeof data.error === 'object' ? JSON.stringify(data.error) : data.error;
+        setLog(`Slide ${i + 1} error: ${errMsg}`, 'err');
+        cell.classList.remove('generating');
+        cell.innerHTML = `<div class="slide-n">${i + 1}</div><div style="color:var(--error);font-size:10px;text-align:center;padding:8px;">${errMsg}</div>`;
+        generatedImages.push(null);
+      } else if (!data.images || !data.images[0]) {
+        setLog(`Slide ${i + 1} unexpected response: ${JSON.stringify(data)}`, 'err');
+        cell.classList.remove('generating');
+        generatedImages.push(null);
+      } else {
+        const url = data.images[0].url;
+      // Use slide plan text if available
+      const slideText = slidePlan[i]?.text || (i === 0 ? hook : '');
+
+      // Composite text onto image using canvas
+      const finalUrl = await compositeTextOnImage(url, slideText, i, variant.label);
+      generatedImages.push(finalUrl);
+      cell.classList.remove('generating');
+      cell.innerHTML = `
+        <div class="slide-n">${i + 1}</div>
+        <img src="${finalUrl}" alt="slide ${i + 1}" style="width:100%;height:100%;object-fit:cover;" />
+        <div class="style-tag">${variant.label}</div>`;
+      setLog(`Slide ${i + 1} done ✓`, 'ok');
+      }
+    } catch (e) {
+      setLog(`Slide ${i + 1} failed: ${e.message}`, 'err');
+      cell.classList.remove('generating');
+      generatedImages.push(null);
+    }
+
+    setProgress(Math.round(((i + 1) / 6) * 100), `${i + 1}/6 slides complete`);
+  }
+
+  setLog('All slides generated.', 'ok');
+  setProgress(100, '6/6 slides complete');
+  btn.disabled = false;
+  document.getElementById('caption-btn').disabled = false;
+  showToast('All 6 slides generated!', 'success');
+}
+
+// ─── CAPTION ─────────────────────────────────────────────────────────────────
+async function generateCaption() {
+  const hook = document.getElementById('gen-hook').value.trim();
+  const appName = document.getElementById('app-name').value.trim() || 'my app';
+  const appLine = document.getElementById('app-oneliner').value.trim();
+  const style = document.getElementById('caption-style').value;
+  const captionBtn = document.getElementById('caption-btn');
+  captionBtn.disabled = true;
+  captionBtn.textContent = 'Generating...';
+
+  const prompt = `Write a TikTok caption for a slideshow with this hook: "${hook}"
+
+App: ${appName} — ${appLine}
+Caption style: ${style}
+
+Rules:
+- Max 150 words
+- Feels natural and human, not salesy
+- Mentions the app naturally (not as an ad)
+- Ends with a soft call to action
+- Include exactly 5 relevant hashtags at the end on a new line (format: #tag)
+- No emojis, keep it conversational
+- No medical claims about curing conditions
+
+Return ONLY the caption text followed by hashtags. No preamble.`;
+
+  try {
+    const res = await fetch('/api/claude', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-anthropic-key': getAnthropicKey()
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 400,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+    const text = data.content?.[0]?.text || '';
+    const formatted = text.replace(/(#\w+)/g, '<span class="hashtag">$1</span>');
+    document.getElementById('caption-output').innerHTML = formatted;
+    document.getElementById('caption-card').style.display = 'block';
+    showToast('Caption generated', 'success');
+  } catch (e) {
+    showToast('Caption error: ' + e.message, 'error');
+  }
+  captionBtn.disabled = false;
+  captionBtn.textContent = 'Generate caption';
+}
+
+function copyCaption() {
+  const text = document.getElementById('caption-output').innerText;
+  navigator.clipboard.writeText(text);
+  showToast('Caption copied to clipboard', 'success');
+}
+
+// ─── POST TO POSTIZ ───────────────────────────────────────────────────────────
+async function postToDrafts() {
+  const postizKey = getPostizKey();
+  const channelId = getPostizChannel();
+
+  if (!postizKey || !channelId) {
+    showToast('Add your Postiz API key and channel ID in Setup', 'error');
+    return;
+  }
+
+  const caption = document.getElementById('caption-output').innerText;
+  const validImages = generatedImages.filter(Boolean);
+  if (validImages.length === 0) { showToast('Generate slides first', 'error'); return; }
+
+  const btn = document.getElementById('post-btn');
+  btn.disabled = true;
+  btn.textContent = 'Posting...';
+
+  try {
+    const mediaIds = [];
+    const mediaUrls = [];
+    for (const imgUrl of validImages) {
+      // Convert data URL to base64 string for proxy
+      const base64 = imgUrl.replace(/^data:image\/png;base64,/, '');
+      const uploadRes = await fetch('/api/postiz', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-postiz-key': postizKey,
+          'x-postiz-path': '/public/v1/upload',
+          'x-content-type': 'multipart'
+        },
+        body: JSON.stringify({ base64, filename: 'slide.png' })
+      });
+      const uploadData = await uploadRes.json();
+      if (uploadData.id) {
+        mediaIds.push(uploadData.id);
+        mediaUrls.push(uploadData.path || '');
+      } else {
+        setLog('Media upload: ' + JSON.stringify(uploadData), 'err');
+      }
+    }
+
+    const postRes = await fetch('/api/postiz', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-postiz-key': postizKey,
+        'x-postiz-path': '/public/v1/posts',
+        'x-content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        type: 'draft',
+        date: new Date(Date.now() + 60000).toISOString(),
+        shortLink: false,
+        tags: [],
+        posts: [{
+          integration: { id: channelId },
+          value: [{ 
+            content: caption, 
+            image: mediaIds.map((id, idx) => ({ id, path: mediaUrls[idx] }))
+          }],
+          settings: { 
+            __type: 'tiktok',
+            duet: false,
+            stitch: false,
+            comment: true,
+            autoAddMusic: 'no',
+            brand_content_toggle: false,
+            brand_organic_toggle: false,
+            content_posting_method: 'UPLOAD',
+            privacy_level: 'PUBLIC_TO_EVERYONE'
+          }
+        }]
+      })
+    });
+    const postData = await postRes.json();
+    if (postData.id || postData.success) {
+      document.getElementById('draft-success-card').style.display = 'block';
+      showToast('Posted to TikTok drafts!', 'success');
+    } else {
+      throw new Error(JSON.stringify(postData));
+    }
+  } catch (e) {
+    showToast('Post failed: ' + e.message, 'error');
+  }
+  btn.disabled = false;
+  btn.textContent = '↑ Post to TikTok drafts';
+}
+
+// ─── PERFORMANCE ─────────────────────────────────────────────────────────────
+function logPerformance() {
+  const hook = document.getElementById('log-hook').value.trim();
+  const views = parseInt(document.getElementById('log-views').value) || 0;
+  const lesson = document.getElementById('log-lesson').value.trim();
+  if (!hook) { showToast('Enter a hook', 'error'); return; }
+  performanceLogs.unshift({ hook, views, lesson, date: new Date().toLocaleDateString() });
+  localStorage.setItem('larry_logs', JSON.stringify(performanceLogs));
+  document.getElementById('log-hook').value = '';
+  document.getElementById('log-views').value = '';
+  document.getElementById('log-lesson').value = '';
+  renderPerfTable();
+  showToast('Result logged', 'success');
+}
+
+function renderPerfTable() {
+  const tbody = document.getElementById('perf-tbody');
+  if (performanceLogs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">No posts logged yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = performanceLogs.map((l, i) => {
+    const cls = l.views >= 100000 ? 'high' : l.views >= 10000 ? 'mid' : 'low';
+    const hasFormula = /dermatologist|mum|mom|partner|flatmate|friend|sister|boyfriend|girlfriend|wife|husband|showed|stopped/i.test(l.hook);
+    return `<tr>
+      <td><div class="hook-preview">${l.hook}</div>${l.lesson ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;">→ ${l.lesson}</div>` : ''}</td>
+      <td><span class="view-count ${cls}">${l.views.toLocaleString()}</span></td>
+      <td style="font-size:11px;color:${hasFormula ? 'var(--success)' : 'var(--muted)'}">${hasFormula ? '✓ formula' : '—'}</td>
+      <td><button class="btn btn-danger" onclick="deleteLog(${i})">×</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function deleteLog(i) {
+  performanceLogs.splice(i, 1);
+  localStorage.setItem('larry_logs', JSON.stringify(performanceLogs));
+  renderPerfTable();
+}
+
+// ─── CONVERT TO VIDEO & POST ─────────────────────────────────────────────────
+async function convertAndPost() {
+  const postizKey = getPostizKey();
+  const channelId = getPostizChannel();
+  if (!postizKey || !channelId) { showToast('Add Postiz key and channel ID', 'error'); return; }
+
+  const valid = generatedImages.filter(Boolean);
+  if (valid.length === 0) { showToast('Generate slides first', 'error'); return; }
+
+  const btn = document.getElementById('post-btn');
+  btn.disabled = true;
+  btn.textContent = 'Creating video...';
+
+  try {
+    // 1. Encode slides to video using canvas + MediaRecorder
+    const videoBlob = await slidesToVideo(valid);
+    btn.textContent = 'Uploading video...';
+
+    // 2. Upload video to Postiz
+    const reader = new FileReader();
+    const base64 = await new Promise(res => {
+      reader.onload = () => res(reader.result.split(',')[1]);
+      reader.readAsDataURL(videoBlob);
+    });
+
+    const uploadRes = await fetch('/api/postiz', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-postiz-key': postizKey,
+        'x-postiz-path': '/public/v1/upload',
+        'x-content-type': 'multipart'
+      },
+      body: JSON.stringify({ base64, filename: 'aureya-slideshow.mp4' })
+    });
+
+    const uploadData = await uploadRes.json();
+    if (!uploadData.id) throw new Error('Upload failed: ' + JSON.stringify(uploadData));
+
+    btn.textContent = 'Scheduling post...';
+
+    // 3. Create post with video
+    const caption = document.getElementById('caption-output').innerText;
+    const postRes = await fetch('/api/postiz', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-postiz-key': postizKey,
+        'x-postiz-path': '/public/v1/posts',
+        'x-content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        type: 'draft',
+        date: new Date(Date.now() + 60000).toISOString(),
+        shortLink: false,
+        tags: [],
+        posts: [{
+          integration: { id: channelId },
+          value: [{
+            content: caption,
+            image: [{ id: uploadData.id, path: uploadData.path || '' }]
+          }],
+          settings: {
+            __type: 'tiktok',
+            duet: false,
+            stitch: false,
+            comment: true,
+            autoAddMusic: 'no',
+            brand_content_toggle: false,
+            brand_organic_toggle: false,
+            content_posting_method: 'UPLOAD',
+            privacy_level: 'PUBLIC_TO_EVERYONE'
+          }
+        }]
+      })
+    });
+
+    const postData = await postRes.json();
+    if (postData.error) throw new Error(JSON.stringify(postData.error));
+
+    document.getElementById('draft-success-card').style.display = 'block';
+    showToast('Video posted to TikTok!', 'success');
+  } catch(e) {
+    showToast('Failed: ' + e.message, 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '↑ Convert to video & post';
+}
+
+async function slidesToVideo(imageUrls) {
+  const W = 1080, H = 1920;
+  const SLIDE_DURATION = 2500; // ms per slide
+  const FPS = 30;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // Load all images first
+  const imgs = await Promise.all(imageUrls.map(src => new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => res(img);
+    img.onerror = rej;
+    img.src = src;
+  })));
+
+  // Use MediaRecorder to capture canvas
+  const stream = canvas.captureStream(FPS);
+  const mimeType = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' :
+                   MediaRecorder.isTypeSupported('video/webm;codecs=h264') ? 'video/webm;codecs=h264' :
+                   'video/webm';
+
+  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 4000000 });
+  const chunks = [];
+  recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+  const done = new Promise(res => recorder.onstop = () => res(new Blob(chunks, { type: mimeType })));
+  recorder.start(100);
+
+  // Draw each slide for SLIDE_DURATION ms
+  for (let i = 0; i < imgs.length; i++) {
+    const end = Date.now() + SLIDE_DURATION;
+    while (Date.now() < end) {
+      ctx.clearRect(0, 0, W, H);
+      // Draw image cover-fit
+      const scale = Math.max(W / imgs[i].width, H / imgs[i].height);
+      const sw = imgs[i].width * scale;
+      const sh = imgs[i].height * scale;
+      ctx.drawImage(imgs[i], (W - sw) / 2, (H - sh) / 2, sw, sh);
+      await new Promise(r => requestAnimationFrame(r));
+    }
+  }
+
+  recorder.stop();
+  return done;
+}
+
+// ─── AUTO GENERATE SLIDE TEXTS ───────────────────────────────────────────────
+async function generateSlideTexts() {
+  const hook = document.getElementById('gen-hook').value.trim();
+  if (!hook) { showToast('Enter a hook first', 'error'); return; }
+
+  const antKey = getAnthropicKey();
+  if (!antKey) { showToast('Add your Anthropic key', 'error'); return; }
+
+  const appName = document.getElementById('app-name')?.value || 'Aureya';
+  const audience = document.getElementById('app-audience')?.value || 'women with sensitive skin';
+
+  const btn = event?.target;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Planning slides...'; }
+
+  try {
+    const res = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-anthropic-key': antKey },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: `You are planning a viral TikTok skincare slideshow for ${appName}, targeting ${audience}.
+
+Hook (Slide 1): "${hook}"
+
+Plan 6 slides. Mix image types naturally like real TikTok creators do — vary between face close-ups, extreme skin texture shots, product shots, and app mockups. Don't use the same type more than twice in a row. Slide 1 is usually a face. Slide 6 usually ends with face or product.
+
+Available types: "face" (creator face close-up), "skin" (extreme skin texture macro), "product" (skincare product shot), "app" (iPhone app screenshot mockup)
+
+Return ONLY a JSON array of 6 objects:
+[
+  {"slide": 1, "type": "face", "text": "hook text here"},
+  {"slide": 2, "type": "skin", "text": "short caption"},
+  ...
+]
+
+Rules:
+- Slide 1 text = the exact hook provided
+- Keep texts short (under 10 words for skin/product/app slides)
+- Make it feel authentic, not salesy
+- The app slide should reference ${appName}'s AI skin analysis` }]
+      })
+    });
+    const data = await res.json();
+    const raw = data.content?.[0]?.text || '[]';
+    const clean = raw.replace(/\`\`\`json|\`\`\`/g, '').trim();
+    slidePlan = JSON.parse(clean);
+
+    // Show plan preview
+    const preview = document.getElementById('slide-plan-preview');
+    if (preview) {
+      preview.style.display = 'block';
+      preview.innerHTML = '<div style="font-size:11px;color:var(--muted);font-family:DM Mono,monospace;margin-bottom:8px;">SLIDE PLAN</div>' +
+        slidePlan.map(s => `
+          <div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:0.5px solid var(--border);">
+            <div style="width:20px;height:20px;border-radius:50%;background:var(--accent);color:var(--black);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${s.slide}</div>
+            <div style="flex:1;">
+              <div style="font-size:11px;color:var(--accent);font-family:DM Mono,monospace;">${s.type.toUpperCase()}</div>
+              <div style="font-size:12px;">${s.text}</div>
+            </div>
+          </div>`).join('');
+    }
+
+    showToast('Slide plan ready!', 'success');
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '✦ Auto-plan all 6 slides with Claude'; }
+}
+
+// ─── DOWNLOAD SLIDES ─────────────────────────────────────────────────────────
+function downloadAllSlides() {
+  const valid = generatedImages.filter(Boolean);
+  if (valid.length === 0) { showToast('No slides to download', 'error'); return; }
+  valid.forEach((url, i) => {
+    setTimeout(() => {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `aureya-slide-${i + 1}.png`;
+      a.click();
+    }, i * 300);
+  });
+  // Also copy caption automatically
+  const captionEl = document.getElementById('caption-output');
+  if (captionEl && captionEl.innerText) {
+    navigator.clipboard.writeText(captionEl.innerText).catch(() => {});
+  }
+  document.getElementById('draft-success-card').style.display = 'block';
+  showToast(`${valid.length} slides downloaded · caption copied!`, 'success');
+}
+
+// ─── CHARACTER GENERATION ────────────────────────────────────────────────────
+let pendingCharacterUrl = null;
+let slidePlan = [];
+let selectedAccountIndex = null;
+
+async function generateCharacter() {
+  const desc = document.getElementById('character-desc').value.trim();
+  const skinType = document.getElementById('character-skin').value;
+  const falKey = getFalKey();
+
+  if (!desc) { showToast('Enter a character description first', 'error'); return; }
+  if (!falKey) { showToast('Add your FAL API key', 'error'); return; }
+
+  const btn = document.getElementById('gen-char-btn');
+  btn.disabled = true;
+  btn.textContent = 'Generating character...';
+
+  const skinMap = {
+    rosacea: 'with rosacea-prone skin, subtle facial redness on cheeks and nose',
+    eczema: 'with eczema-prone skin, dry sensitive complexion',
+    both: 'with rosacea and eczema-prone skin, sensitive reactive complexion',
+    sensitive: 'with sensitive skin, delicate complexion'
+  };
+
+  const prompt = `Extreme macro close-up portrait of a ${desc} ${skinMap[skinType]}. Hyperrealistic, ultra-detailed skin texture, visible pores, natural imperfections, photorealistic, cinematic macro photography, shot on Arri Alexa 65, 8k resolution, raw photo, no makeup, natural soft window light. Centre-framed looking directly at camera. Portrait orientation.`;
+
+  try {
+    const res = await fetch('/api/fal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-fal-key': falKey },
+      body: JSON.stringify({
+        endpoint: 'fal-ai/flux-general',
+        input: {
+          prompt,
+          negative_prompt: 'smooth plastic skin, airbrushed, perfect flawless skin, cartoon, CGI, 3D render, makeup, beauty retouch, doll-like, watermark, text',
+          image_size: { width: 1024, height: 1536 },
+          num_inference_steps: 28,
+          guidance_scale: 3.2,
+          num_images: 1,
+          output_format: 'png',
+          loras: [
+            { path: 'https://huggingface.co/XLabs-AI/flux-RealismLora/resolve/main/lora.safetensors', scale: 0.85 },
+            { path: 'https://huggingface.co/Shakker-Labs/FLUX.1-dev-LoRA-add-details/resolve/main/FLUX-dev-lora-add_details.safetensors', scale: 0.4 }
+          ]
+        }
+      })
+    });
+    const data = await res.json();
+    if (!data.images?.[0]?.url) throw new Error(JSON.stringify(data.error || data));
+
+    pendingCharacterUrl = data.images[0].url;
+    const preview = document.getElementById('char-preview');
+    const img = document.getElementById('char-preview-img');
+    img.src = pendingCharacterUrl;
+    preview.style.display = 'block';
+    showToast('Character generated!', 'success');
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+  btn.disabled = false;
+  btn.textContent = '✦ Generate character';
+}
+
+function saveCharacterToAccount() {
+  const label = document.getElementById('account-label').value.trim();
+  const desc = document.getElementById('character-desc').value.trim();
+  const skinType = document.getElementById('character-skin').value;
+
+  if (!label) { showToast('Enter an account nickname', 'error'); return; }
+  if (!pendingCharacterUrl) { showToast('Generate a character first', 'error'); return; }
+
+  connectedAccounts.push({
+    label,
+    desc,
+    skinType,
+    characterUrl: pendingCharacterUrl,
+    token: null,
+    openId: null
+  });
+  saveAccounts();
+  renderAccounts();
+  renderAccountSelector();
+
+  // Reset form
+  document.getElementById('account-label').value = '';
+  document.getElementById('character-desc').value = '';
+  document.getElementById('char-preview').style.display = 'none';
+  pendingCharacterUrl = null;
+  showToast('Account saved with character!', 'success');
+}
+
+function selectAccount(index) {
+  selectedAccountIndex = index;
+  const acc = connectedAccounts[index];
+
+  // Update selector UI
+  document.querySelectorAll('.account-chip').forEach((c, i) => {
+    c.style.borderColor = i === index ? 'var(--accent)' : 'var(--border)';
+    c.style.color = i === index ? 'var(--accent)' : 'var(--muted)';
+  });
+
+  // Show character preview
+  const preview = document.getElementById('selected-char-preview');
+  const img = document.getElementById('selected-char-img');
+  const name = document.getElementById('selected-account-name');
+  if (acc.characterUrl) {
+    img.src = acc.characterUrl;
+    name.textContent = acc.label;
+    preview.style.display = 'flex';
+  }
+}
+
+function renderAccountSelector() {
+  const selector = document.getElementById('account-selector');
+  const noMsg = document.getElementById('no-account-msg');
+  if (!selector) return;
+
+  if (connectedAccounts.length === 0) {
+    selector.innerHTML = '';
+    if (noMsg) noMsg.style.display = 'block';
+    return;
+  }
+  if (noMsg) noMsg.style.display = 'none';
+
+  selector.innerHTML = connectedAccounts.map((acc, i) => `
+    <div class="account-chip" onclick="selectAccount(${i})" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--border-radius-lg);border:1.5px solid var(--border);cursor:pointer;transition:all 0.15s;">
+      ${acc.characterUrl ? `<img src="${acc.characterUrl}" style="width:32px;height:40px;object-fit:cover;border-radius:4px;" />` : '<div style="width:32px;height:40px;background:var(--input-bg);border-radius:4px;"></div>'}
+      <div>
+        <div style="font-size:13px;font-weight:500;">${acc.label}</div>
+        <div style="font-size:10px;color:var(--muted);">${acc.skinType || 'sensitive'}</div>
+      </div>
+    </div>
+  `).join('');
+
+  // Auto-select first account
+  if (selectedAccountIndex === null && connectedAccounts.length > 0) {
+    selectAccount(0);
+  }
+}
+
+// ─── ACCOUNT MANAGEMENT ──────────────────────────────────────────────────────
+let connectedAccounts = JSON.parse(localStorage.getItem('larry_accounts') || '[]');
+let pendingAccountLabel = '';
+
+function saveAccounts() {
+  localStorage.setItem('larry_accounts', JSON.stringify(connectedAccounts));
+}
+
+function startAccountConnect() {
+  const label = document.getElementById('account-label').value.trim();
+  if (!label) { showToast('Enter an account nickname first', 'error'); document.getElementById('account-label').focus(); return; }
+  // Store all pending account data before redirect
+  localStorage.setItem('pending_account_label', label);
+  localStorage.setItem('pending_account_desc', document.getElementById('character-desc').value.trim());
+  localStorage.setItem('pending_account_skin', document.getElementById('character-skin').value);
+  localStorage.setItem('pending_account_char', pendingCharacterUrl || '');
+  window.location.href = '/api/tiktok-auth';
+}
+
+function connectTikTokToExisting(index) {
+  const acc = connectedAccounts[index];
+  if (!acc) { alert('Account not found at index ' + index); return; }
+  console.log('Connecting TikTok to:', acc.label, 'index:', index);
+  localStorage.setItem('pending_account_label', acc.label);
+  localStorage.setItem('pending_account_desc', acc.desc || '');
+  localStorage.setItem('pending_account_skin', acc.skinType || 'sensitive');
+  localStorage.setItem('pending_account_char', acc.characterUrl || '');
+  localStorage.setItem('pending_connect_existing', index.toString());
+  console.log('Redirecting to /api/tiktok-auth');
+  window.location.href = '/api/tiktok-auth';
+}
+
+function renderAccounts() {
+  const list = document.getElementById('accounts-list');
+  const noAccounts = document.getElementById('no-accounts');
+  const postList = document.getElementById('post-to-accounts-list');
+  const multiPostBtn = document.getElementById('multi-post-btn');
+  if (!list) return;
+
+  if (connectedAccounts.length === 0) {
+    list.innerHTML = '';
+    if (noAccounts) noAccounts.style.display = 'block';
+    if (postList) postList.innerHTML = '';
+    if (multiPostBtn) multiPostBtn.disabled = true;
+    return;
+  }
+
+  if (noAccounts) noAccounts.style.display = 'none';
+  if (multiPostBtn) multiPostBtn.disabled = false;
+
+  list.innerHTML = connectedAccounts.map((acc, i) => `
+    <div style="padding:14px 0;border-bottom:0.5px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:12px;">
+        ${acc.characterUrl
+          ? `<img src="${acc.characterUrl}" style="width:44px;height:58px;object-fit:cover;border-radius:6px;border:1.5px solid rgba(200,255,90,0.4);" />`
+          : `<div style="width:44px;height:58px;border-radius:6px;background:rgba(200,255,90,0.1);border:1px solid rgba(200,255,90,0.3);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:500;color:var(--accent);">${acc.label.charAt(0).toUpperCase()}</div>`
+        }
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:500;">${acc.label}</div>
+          <div style="font-size:11px;color:var(--muted);">${acc.desc || acc.skinType || ''}</div>
+          <div style="font-size:11px;font-family:'DM Mono',monospace;color:${acc.loraPath ? '#4ade80' : acc.openId ? 'var(--muted)' : 'var(--muted)'};">
+            ${acc.loraPath ? '✓ LoRA trained — max consistency' : acc.openId ? 'TikTok connected' : 'No TikTok connected'}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+          <button onclick="connectTikTokToExisting(${i})" style="font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid rgba(200,255,90,0.4);background:none;color:${acc.openId ? '#4ade80' : 'var(--accent)'};cursor:pointer;white-space:nowrap;">${acc.openId ? '✓ Reconnect TikTok' : 'Connect TikTok'}</button>
+          ${acc.characterUrl && !acc.loraPath ? `<button onclick="trainLoRA(${i})" id="lora-btn-${i}" style="font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:none;color:var(--muted);cursor:pointer;white-space:nowrap;">⚡ Train LoRA</button>` : ''}
+          ${acc.loraPath ? `<span style="font-size:10px;color:#4ade80;font-family:'DM Mono',monospace;">LoRA ready</span>` : ''}
+          <button onclick="removeAccount(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;">×</button>
+        </div>
+      </div>
+      ${acc.loraTraining ? `<div style="margin-top:8px;font-size:11px;color:var(--warning);font-family:'DM Mono',monospace;">⏳ Training in progress — check back in ~20 minutes</div>` : ''}
+    </div>
+  `).join('');
+
+  if (postList) {
+    postList.innerHTML = connectedAccounts.map((acc, i) => `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <input type="checkbox" id="post-acc-${i}" checked style="width:16px;height:16px;cursor:pointer;" />
+        <label for="post-acc-${i}" style="font-size:14px;cursor:pointer;">${acc.label}</label>
+      </div>
+    `).join('');
+  }
+}
+
+function removeAccount(i) {
+  connectedAccounts.splice(i, 1);
+  saveAccounts();
+  renderAccounts();
+  updateTikTokBtn(connectedAccounts.length > 0);
+}
+
+function postToSelectedAccounts() {
+  const valid = generatedImages.filter(Boolean);
+  if (valid.length === 0) { showToast('Generate slides first in the Generate tab', 'error'); return; }
+
+  const selected = connectedAccounts.filter((_, i) => {
+    const cb = document.getElementById(`post-acc-${i}`);
+    return cb && cb.checked;
+  });
+
+  if (selected.length === 0) { showToast('Select at least one account', 'error'); return; }
+
+  // Download slides for each selected account
+  selected.forEach((acc, si) => {
+    const slug = acc.label.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+    valid.forEach((url, i) => {
+      setTimeout(() => {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${slug}-slide-${i + 1}.png`;
+        a.click();
+      }, (si * valid.length + i) * 350);
+    });
+  });
+
+  const caption = document.getElementById('caption-output')?.innerText;
+  if (caption) navigator.clipboard.writeText(caption).catch(() => {});
+
+  showToast(`Slides downloaded for ${selected.length} account${selected.length > 1 ? 's' : ''} · caption copied!`, 'success');
+}
+
+// ─── BULK GENERATE ────────────────────────────────────────────────────────────
+async function bulkGenerate() {
+  const oaiKey = getOpenAIKey();
+  if (!oaiKey) { showToast('Add your OpenAI API key', 'error'); return; }
+
+  const count = parseInt(document.getElementById('bulk-count').value);
+  const hookBank = document.getElementById('bulk-hooks').value.trim().split('\n').filter(h => h.trim());
+  const arch = document.getElementById('arch-desc').value.trim();
+
+  if (!arch) { showToast('Add architecture description in Setup', 'error'); return; }
+
+  const btn = document.getElementById('bulk-btn');
+  btn.disabled = true;
+  document.getElementById('bulk-progress').style.display = 'block';
+  document.getElementById('bulk-log').innerHTML = '';
+
+  const bulkLog = (msg, type='') => {
+    const el = document.getElementById('bulk-log');
+    const div = document.createElement('div');
+    div.className = type ? `log-${type}` : '';
+    div.textContent = '> ' + msg;
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+  };
+
+  const setBulkProgress = (pct, label) => {
+    document.getElementById('bulk-progress-bar').style.width = pct + '%';
+    document.getElementById('bulk-progress-label').textContent = label;
+  };
+
+  // Auto-generate hooks if bank is empty or insufficient
+  let hooks = [...hookBank];
+  if (hooks.length < count) {
+    bulkLog(`Generating ${count - hooks.length} hooks with Claude...`, 'info');
+    try {
+      const context = document.getElementById('hook-context').value || 'Aureya — AI skincare for eczema/rosacea';
+      const res = await fetch('/api/claude', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-anthropic-key': getAnthropicKey() },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 800,
+          messages: [{ role: 'user', content: `Generate ${count - hooks.length} unique viral TikTok hooks for an AI skincare app targeting eczema/rosacea sufferers. Formula: [person] + [conflict] → showed them AI → changed their mind. Return ONLY a JSON array. Context: ${context}` }]
+        })
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text || '[]';
+      const generated = JSON.parse(text.replace(/```json|```/g,'').trim());
+      hooks = [...hooks, ...generated].slice(0, count);
+    } catch(e) {
+      bulkLog('Hook generation failed: ' + e.message, 'err');
+    }
+  }
+
+  const allSlideshows = [];
+
+  for (let s = 0; s < count; s++) {
+    const hook = hooks[s] || `Slideshow ${s+1}`;
+    bulkLog(`Slideshow ${s+1}/${count}: "${hook.slice(0,40)}..."`, 'info');
+    setBulkProgress((s / count) * 100, `Generating slideshow ${s+1} of ${count}...`);
+
+    const images = [];
+    for (let i = 0; i < 6; i++) {
+      const variant = styleVariants[i];
+      const isFirst = i === 0;
+      const beforeExtras = document.getElementById('before-extras').value.trim();
+      const styleDesc = isFirst ? variant.style + (beforeExtras ? ` Including: ${beforeExtras}.` : '') : variant.style;
+      const negativePrompt = 'smooth plastic skin, airbrushed, perfect flawless skin, beauty retouch, instagram filter, facetune, heavy makeup, cartoon, CGI, 3D render, overexposed, ring light, studio lighting, stock photo';
+      const fullPrompt = `${arch} ${styleDesc} Style: photorealistic documentary portrait photography. Negative: ${negativePrompt}`;
+
+      try {
+        const res = await fetch('https://api.openai.com/v1/images/generations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${oaiKey}` },
+          body: JSON.stringify({ model: 'gpt-image-1', prompt: fullPrompt, n: 1, size: '1024x1536' })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+        const url = data.data[0].url || `data:image/png;base64,${data.data[0].b64_json}`;
+        images.push({ url, label: variant.label, slideNum: i + 1, isFirst });
+        bulkLog(`  Slide ${i+1} ✓`, 'ok');
+      } catch(e) {
+        bulkLog(`  Slide ${i+1} failed: ${e.message}`, 'err');
+        images.push(null);
+      }
+    }
+    allSlideshows.push({ hook, images });
+  }
+
+  setBulkProgress(100, 'All slideshows generated! Downloading...');
+  bulkLog('Downloading all slideshows...', 'info');
+
+  // Download all images with slideshow and slide labels
+  for (let s = 0; s < allSlideshows.length; s++) {
+    const { hook, images } = allSlideshows[s];
+    const hookSlug = hook.slice(0, 30).replace(/[^a-z0-9]/gi, '-').toLowerCase();
+    for (let i = 0; i < images.length; i++) {
+      if (!images[i]) continue;
+      await new Promise(r => setTimeout(r, 300));
+      const a = document.createElement('a');
+      a.href = images[i].url;
+      a.download = `slideshow-${s+1}-${hookSlug}-slide-${i+1}.png`;
+      a.click();
+    }
+  }
+
+  showToast(`${count} slideshows generated and downloaded!`, 'success');
+  btn.disabled = false;
+}
+
+// ─── TEXT OVERLAY ON CANVAS ───────────────────────────────────────────────────
+async function getTextPlacement(text, slideIndex, slideLabel) {
+  // Ask Claude where to place text based on slide content
+  try {
+    const res = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-anthropic-key': getAnthropicKey() },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 100,
+        messages: [{ role: 'user', content: `You are placing text on a TikTok skincare slideshow photo. 
+
+Slide ${slideIndex + 1}: "${slideLabel}"
+Text to place: "${text}"
+
+Decide the best position for this text overlay. Consider:
+- Hook text (slide 1) often works well upper-center or center
+- Short words like "and this" / "to this" work well offset (not centered)
+- Later slides can vary — bottom, top, or side
+- Avoid covering the face/skin which is the focal point
+
+Return ONLY a JSON object: {"x": 0.0-1.0, "y": 0.0-1.0, "align": "left"|"center"|"right", "size": "small"|"medium"|"large"}
+x=0.5 y=0.5 is center. x=0 is left edge, x=1 is right edge. y=0 is top, y=1 is bottom.` }]
+      })
+    });
+    const data = await res.json();
+    const txt = data.content?.[0]?.text || '{}';
+    return JSON.parse(txt.replace(/```json|```/g, '').trim());
+  } catch(e) {
+    // Fallback positions
+    const fallbacks = [
+      { x: 0.5, y: 0.35, align: 'center', size: 'large' },
+      { x: 0.7, y: 0.8, align: 'right', size: 'small' },
+      { x: 0.3, y: 0.7, align: 'left', size: 'small' },
+      { x: 0.5, y: 0.2, align: 'center', size: 'medium' },
+      { x: 0.5, y: 0.8, align: 'center', size: 'medium' },
+      { x: 0.5, y: 0.75, align: 'center', size: 'medium' },
+    ];
+    return fallbacks[slideIndex] || { x: 0.5, y: 0.75, align: 'center', size: 'medium' };
+  }
+}
+
+async function compositeTextOnImage(imageUrl, text, slideIndex, slideLabel) {
+  if (!text || !text.trim()) return imageUrl;
+
+  const placement = await getTextPlacement(text, slideIndex, slideLabel || '');
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+
+      ctx.drawImage(img, 0, 0);
+
+      // Font size based on placement size hint
+      const sizeMap = { small: 0.055, medium: 0.068, large: 0.082 };
+      const sizeFactor = sizeMap[placement.size] || 0.068;
+      const fontSize = Math.round(img.width * sizeFactor);
+      ctx.font = `600 ${fontSize}px -apple-system, "Helvetica Neue", Arial, sans-serif`;
+      ctx.textAlign = placement.align || 'center';
+      ctx.fillStyle = 'white';
+      ctx.shadowColor = 'rgba(0,0,0,0.85)';
+      ctx.shadowBlur = 14;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 2;
+
+      // Word wrap
+      const words = text.split(' ');
+      const maxWidth = img.width * (placement.align === 'center' ? 0.78 : 0.55);
+      const lines = [];
+      let line = '';
+      for (const word of words) {
+        const test = line ? line + ' ' + word : word;
+        if (ctx.measureText(test).width > maxWidth && line) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = test;
+        }
+      }
+      if (line) lines.push(line);
+
+      const lineHeight = fontSize * 1.3;
+      const totalHeight = lines.length * lineHeight;
+
+      // X anchor based on alignment
+      const xAnchor = placement.align === 'left'
+        ? img.width * placement.x
+        : placement.align === 'right'
+          ? img.width * placement.x
+          : img.width * placement.x;
+
+      const startY = img.height * placement.y - totalHeight / 2 + fontSize;
+
+      lines.forEach((l, li) => {
+        ctx.fillText(l, xAnchor, startY + li * lineHeight);
+      });
+
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(imageUrl);
+    img.src = imageUrl;
+  });
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  const icons = { success: '✓', error: '✕', '': 'ℹ' };
+  t.innerHTML = `<span style="color:${type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--error)' : 'var(--accent)'}">${icons[type] || 'ℹ'}</span> ${msg}`;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+loadSavedKeys();
+renderPerfTable();
+renderAccounts();
+renderAccountSelector();
+handleTikTokCallback();
+
+function handleTikTokCallback() {
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get('tiktok_connected')) {
+    const token = params.get('tiktok_token');
+    const openId = params.get('tiktok_open_id');
+    
+    // Get pending label from localStorage
+    const label = localStorage.getItem('pending_account_label') || 'TikTok Account ' + (connectedAccounts.length + 1);
+    const desc = localStorage.getItem('pending_account_desc') || '';
+    const skinType = localStorage.getItem('pending_account_skin') || 'sensitive';
+    const characterUrl = localStorage.getItem('pending_account_char') || '';
+    const existingIdx = localStorage.getItem('pending_connect_existing');
+    
+    localStorage.removeItem('pending_account_label');
+    localStorage.removeItem('pending_account_desc');
+    localStorage.removeItem('pending_account_skin');
+    localStorage.removeItem('pending_account_char');
+    localStorage.removeItem('pending_connect_existing');
+
+    if (existingIdx !== null) {
+      // Connecting TikTok to existing account
+      const idx = parseInt(existingIdx);
+      if (connectedAccounts[idx]) {
+        connectedAccounts[idx].token = token;
+        connectedAccounts[idx].openId = openId;
+        showToast('TikTok connected to ' + connectedAccounts[idx].label, 'success');
+      }
+    } else {
+      // Check if already connected by openId
+      const existing = connectedAccounts.findIndex(a => a.openId === openId);
+      if (existing >= 0) {
+        connectedAccounts[existing] = { label, desc, skinType, characterUrl, token, openId };
+        showToast('Account updated: ' + label, 'success');
+      } else {
+        connectedAccounts.push({ label, desc, skinType, characterUrl, token, openId });
+        showToast('Account connected: ' + label, 'success');
+      }
+    }
+    saveAccounts();
+    renderAccounts();
+    updateTikTokBtn(true);
+    window.history.replaceState({}, '', '/');
+    nav('accounts');
+  } else if (params.get('tiktok_error')) {
+    showToast('TikTok error: ' + params.get('tiktok_error'), 'error');
+    window.history.replaceState({}, '', '/');
+  } else if (connectedAccounts.length > 0) {
+    updateTikTokBtn(true);
+  }
+}
+
+function updateTikTokBtn(connected) {
+  const btn = document.getElementById('tiktok-connect-btn');
+  if (connected) {
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.01-.07z"/></svg> ${connectedAccounts.length} account${connectedAccounts.length !== 1 ? 's' : ''} connected`;
+    btn.style.color = '#4ade80';
+    btn.style.borderColor = 'rgba(74,222,128,0.3)';
+    btn.onclick = (e) => {
+      e.preventDefault();
+      localStorage.removeItem('tiktok_token');
+      localStorage.removeItem('tiktok_open_id');
+      updateTikTokBtn(false);
+      showToast('TikTok disconnected', '');
+    };
+  } else {
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.01-.07z"/></svg> Connect TikTok`;
+    btn.style.color = '#6b6b6b';
+    btn.style.borderColor = 'rgba(255,255,255,0.08)';
+    btn.onclick = null;
+    btn.href = '/api/tiktok-auth';
+  }
+}
+</script>
+</body>
+</html>
