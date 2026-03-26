@@ -1,0 +1,17 @@
+{
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/", "destination": "/index.html" }
+  ],
+  "functions": {
+    "api/fal.js": { "maxDuration": 10 },
+    "api/tiktok-auth.js": { "maxDuration": 60 },
+    "api/cron.js": { "maxDuration": 300 }
+  },
+  "crons": [
+    {
+      "path": "/api/cron",
+      "schedule": "0 * * * *"
+    }
+  ]
+}
