@@ -1,5 +1,3 @@
-# Larry-
-Slideshow Creator for Tiktok uploads
 # Larry — TikTok Slideshow Automator
 
 Larry is an AI-powered tool that generates realistic UGC-style skincare slideshows and posts them to TikTok automatically. Built for Aureya and sensitive skin content creators.
