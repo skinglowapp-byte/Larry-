@@ -1,0 +1,35 @@
+# .github/workflows/cron.yml
+# Hourly cron trigger — workaround for Vercel Hobby plan (no cron support).
+# Hits /api/cron every hour, which posts any queued slideshows that are due.
+# Requires CRON_SECRET to be set in GitHub repo secrets AND Vercel env vars.
+# Setup:
+#   GitHub → repo → Settings → Secrets → New secret: CRON_SECRET = <random string>
+#   Vercel → project → Settings → Environment Variables → CRON_SECRET = same value
+
+name: Hourly post queue
+
+on:
+  schedule:
+    # Runs every hour at :05 past the hour (UTC)
+    - cron: '5 * * * *'
+  # Allow manual trigger from GitHub Actions UI
+  workflow_dispatch:
+
+jobs:
+  trigger-cron:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Trigger cron endpoint
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            "https://larry-slidshow.vercel.app/api/cron")
+          echo "Response code: $RESPONSE"
+          if [ "$RESPONSE" != "200" ]; then
+            echo "Cron endpoint returned $RESPONSE"
+            exit 1
+          fi
