@@ -1249,6 +1249,30 @@ async function trainLoRA(accountIndex) {
   }
 }
 
+// ─── MANUAL LORA URL MANAGEMENT ──────────────────────────────────────────────
+// Train on fal.ai UI → copy the model URL → paste here
+function saveLoRAUrl(index) {
+  const input = document.getElementById(`lora-url-${index}`);
+  if (!input) return;
+  const url = input.value.trim();
+  if (!url) { showToast('Paste a LoRA URL first', 'error'); return; }
+  if (!url.startsWith('http')) { showToast('Invalid URL — should start with https://', 'error'); return; }
+  connectedAccounts[index].loraPath = url;
+  // Auto-set trigger word from account label
+  connectedAccounts[index].loraTrigger = connectedAccounts[index].label.replace(/\s+/g, '_').toLowerCase() + '_person';
+  saveAccounts();
+  renderAccounts();
+  showToast('LoRA saved! All slides will now use this face.', 'success');
+}
+
+function removeLoRA(index) {
+  connectedAccounts[index].loraPath = null;
+  connectedAccounts[index].loraTrigger = null;
+  saveAccounts();
+  renderAccounts();
+  showToast('LoRA removed', '');
+}
+
 // ─── 2-PASS GENERATION PIPELINE ─────────────────────────────────────────────
 // Pass 1: FLUX Dev via fal-ai/flux-lora (best photorealism on FAL, FLUX architecture)
 // Pass 2: Crystal Upscaler (face-specific enhancement)
@@ -2193,8 +2217,21 @@ function renderAccounts() {
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
           <button onclick="connectTikTokToExisting(${i})" style="font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid rgba(200,255,90,0.4);background:none;color:${acc.openId ? '#4ade80' : 'var(--accent)'};cursor:pointer;white-space:nowrap;">${acc.openId ? '✓ Reconnect TikTok' : 'Connect TikTok'}</button>
-          ${acc.characterUrl && !acc.loraPath ? `<button onclick="trainLoRA(${i})" id="lora-btn-${i}" style="font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:none;color:var(--muted);cursor:pointer;white-space:nowrap;">⚡ Train LoRA</button>` : ''}
-          ${acc.loraPath ? `<span style="font-size:10px;color:#4ade80;font-family:'DM Mono',monospace;">LoRA ready</span>` : ''}
+          ${!acc.loraPath ? `
+            <div style="margin-top:6px;">
+              <button onclick="window.open('https://fal.ai/models', '_blank')" style="font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:none;color:var(--muted);cursor:pointer;white-space:nowrap;">⚡ Train LoRA on fal.ai ↗</button>
+              <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5;">Train on <a href="https://fal.ai/models" target="_blank" style="color:var(--accent);text-decoration:none;">fal.ai</a>, then paste the model URL below.</div>
+              <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
+                <input type="text" id="lora-url-${i}" placeholder="Paste trained LoRA URL here..." 
+                  style="font-size:11px;padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:#111;color:var(--white);font-family:DM Mono,monospace;flex:1;margin:0;"
+                />
+                <button onclick="saveLoRAUrl(${i})" style="font-size:11px;padding:6px 12px;border-radius:6px;border:1px solid rgba(200,255,90,0.3);background:none;color:var(--accent);cursor:pointer;white-space:nowrap;">Save</button>
+              </div>
+            </div>` : ''}
+          ${acc.loraPath ? `<div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+            <span style="font-size:10px;color:#4ade80;font-family:'DM Mono',monospace;">⚡ LoRA active</span>
+            <button onclick="removeLoRA(${i})" style="font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.1);background:none;color:var(--muted);cursor:pointer;">remove</button>
+          </div>` : ''}
           <button onclick="removeAccount(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;">×</button>
         </div>
       </div>
