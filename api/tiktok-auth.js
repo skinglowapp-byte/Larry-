@@ -115,7 +115,7 @@ export default async function handler(req, res) {
     // Clean title from caption
     const captionLines = caption ? caption.split(/[\n\r]+/).map(l => l.trim()).filter(Boolean) : [];
     const titleLine = captionLines.find(l => !l.startsWith('#')) || '';
-    const cleanTitle = titleLine.replace(/#\w+/g, '').replace(/[<>"]/g, '').trim().slice(0, 150) || 'Skincare story';
+    const cleanTitle = (titleLine.replace(/#\w+/g, '').replace(/[^a-zA-Z0-9 .,!?'\-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90)) || 'My skincare journey';
 
     try {
       // Convert base64 images to buffers
@@ -126,6 +126,8 @@ export default async function handler(req, res) {
 
       // Step 1: Init the post
       const initPayload = {
+        media_type: 'PHOTO',
+        post_mode: isLive ? 'DIRECT_POST' : 'INBOX',
         post_info: {
           title: cleanTitle,
           privacy_level: isLive ? 'PUBLIC_TO_EVERYONE' : 'SELF_ONLY',
@@ -138,9 +140,7 @@ export default async function handler(req, res) {
           source: 'FILE_UPLOAD',
           photo_cover_index: 0,
           photo_count: imageBuffers.length
-        },
-        post_mode: isLive ? 'DIRECT_POST' : 'INBOX',
-        media_type: 'PHOTO'
+        }
       };
 
       console.log('[TikTok] mode:', posting_mode, '| title:', cleanTitle, '| images:', imageBuffers.length);
