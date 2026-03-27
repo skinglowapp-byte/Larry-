@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     const clientKey = process.env.TIKTOK_CLIENT_KEY;
     if (!clientKey) return res.status(500).json({ error: 'TIKTOK_CLIENT_KEY not set' });
 
-    const redirectUri = process.env.TIKTOK_REDIRECT_URI || `https://larry-slideshow.vercel.app/api/tiktok-callback`;
+    const redirectUri = process.env.TIKTOK_REDIRECT_URI || `https://${req.headers.host}/api/tiktok-callback`;
     const scope = 'user.info.basic,video.upload,video.publish';
 
     const accountIdx = req.query.account_idx ?? '';
@@ -36,7 +36,7 @@ export default async function handler(req, res) {
 
     const clientKey = process.env.TIKTOK_CLIENT_KEY;
     const clientSecret = process.env.TIKTOK_CLIENT_SECRET;
-    const redirectUri = process.env.TIKTOK_REDIRECT_URI || `https://larry-slideshow.vercel.app/api/tiktok-callback`;
+    const redirectUri = process.env.TIKTOK_REDIRECT_URI || `https://${req.headers.host}/api/tiktok-callback`;
 
     const idxMatch = state?.match(/_idx(\d+)$/);
     const accountIdx = idxMatch ? idxMatch[1] : '';
