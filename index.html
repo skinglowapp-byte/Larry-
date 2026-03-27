@@ -553,10 +553,6 @@
       <input type="password" id="anthropic-key" placeholder="sk-ant-..." oninput="updateStatus()" style="width:100%;background:#1c1c1c;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:9px 12px;color:#f5f2ec;font-family:DM Mono,monospace;font-size:12px;margin:0;" />
     </div>
     <div id="main-status" style="font-family:DM Mono,monospace;font-size:11px;padding:9px 14px;border-radius:100px;border:1px solid rgba(255,255,255,0.08);color:#6b6b6b;white-space:nowrap;display:flex;align-items:center;gap:6px;"><div style="width:6px;height:6px;border-radius:50%;background:currentColor;"></div>not set</div>
-    <div style="flex:1;min-width:150px;">
-      <div style="font-family:DM Mono,monospace;font-size:10px;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">ElevenLabs (optional)</div>
-      <input type="password" id="eleven-key" placeholder="sk_..." oninput="saveElevenKey()" style="width:100%;background:#1c1c1c;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:9px 12px;color:#f5f2ec;font-family:DM Mono,monospace;font-size:12px;margin:0;" />
-    </div>
     <a id="tiktok-connect-btn" href="/api/tiktok-auth" style="padding:9px 16px;border-radius:100px;border:1px solid rgba(255,255,255,0.08);background:none;color:#6b6b6b;font-family:DM Mono,monospace;font-size:11px;white-space:nowrap;text-decoration:none;display:flex;align-items:center;gap:6px;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.01-.07z"/></svg>
       Connect TikTok
@@ -732,26 +728,6 @@
           <button class="btn btn-ghost" onclick="downloadAllSlides()">↓ Download slides</button>
           <button class="btn btn-ghost" onclick="copyCaption()">Copy caption</button>
           <button class="btn btn-ghost" onclick="generateCaption()">Regenerate</button>
-        </div>
-      </div>
-
-
-      <!-- VOICEOVER CARD -->
-      <div class="card" id="voiceover-card" style="display:none;">
-        <div class="card-title">Voiceover (optional)</div>
-        <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5;">Generate an AI voiceover from your caption. Add ElevenLabs key in the header first.</div>
-        <div style="display:flex;gap:10px;margin-bottom:12px;align-items:center;">
-          <select id="eleven-voice-select" style="flex:1;margin-bottom:0;"><option value="">— Load voices first —</option></select>
-          <button class="btn btn-ghost" style="font-size:12px;white-space:nowrap;flex-shrink:0;" onclick="loadElevenVoices()">&#8635; Voices</button>
-        </div>
-        <textarea id="voiceover-script" rows="3" placeholder="Paste script or use caption..." style="margin-bottom:10px;"></textarea>
-        <div style="display:flex;gap:10px;">
-          <button class="btn btn-ghost" style="font-size:12px;" onclick="useCaptionAsScript()">Use caption</button>
-          <button class="btn btn-primary" style="flex:1;" onclick="generateVoiceover()" id="voiceover-btn">&#127897; Generate voiceover</button>
-        </div>
-        <div id="voiceover-result" style="display:none;margin-top:12px;">
-          <audio id="voiceover-audio" controls style="width:100%;margin-bottom:8px;"></audio>
-          <a id="voiceover-download" download="voiceover.mp3" style="font-size:12px;color:var(--accent);cursor:pointer;text-decoration:none;">&#8595; Download MP3</a>
         </div>
       </div>
 
@@ -976,9 +952,9 @@ function nav(name) {
   document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('pane-' + name).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => {
-    if (n.getAttribute('onclick') === `nav('${name}')`) n.classList.add('active');
-  });
+  const navItems = document.querySelectorAll('.nav-item');
+  const map = { setup: 0, hooks: 1, generate: 2, accounts: 3, performance: 4, schedule: 5 };
+  const idx = map[name]; if (idx !== undefined && idx >= 0 && navItems[idx]) navItems[idx].classList.add('active');
   if (name === 'hooks') syncHookContext();
   if (name === 'generate') { syncGenHook(); renderSlidePreviewPlaceholders(); renderAccountSelector(); }
   if (name === 'performance') renderPerfTable();
@@ -1007,20 +983,40 @@ function getAnthropicKey() { return document.getElementById('anthropic-key').val
 // ─── FAL.AI CLIENT ────────────────────────────────────────────────────────────
 // Submit via proxy (avoids CORS on POST), poll from browser (avoids timeout)
 async function callFal(endpoint, input, falKey) {
-  // All calls route through /api/fal — server handles submit+poll+result (60s window)
-  // Never calls queue.fal.run directly — avoids CORS and the subpath 405 bug
   const key = falKey || getFalKey();
-  const res = await fetch('/api/fal', {
+
+  // Step 1: Submit job via proxy to get request_id (fast, avoids CORS on POST)
+  const submitRes = await fetch('/api/fal', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-fal-key': key },
     body: JSON.stringify({ endpoint, input }),
   });
-  const text = await res.text();
-  let data;
-  try { data = JSON.parse(text); }
-  catch(e) { throw new Error('fal proxy error: ' + text.slice(0, 200)); }
-  if (!res.ok) throw new Error(data.error || 'fal failed: ' + res.status);
-  return data;
+  const submitText = await submitRes.text();
+  let submitData;
+  try { submitData = JSON.parse(submitText); }
+  catch(e) { throw new Error('fal proxy error: ' + submitText.slice(0, 200)); }
+  if (!submitData.request_id) throw new Error('Submit failed: ' + JSON.stringify(submitData));
+
+  const requestId = submitData.request_id;
+
+  // Step 2: Poll directly from browser (no serverless timeout)
+  for (let i = 0; i < 90; i++) {
+    await new Promise(r => setTimeout(r, 2000));
+    const statusRes = await fetch(
+      `https://queue.fal.run/${endpoint}/requests/${requestId}/status`,
+      { headers: { 'Authorization': `Key ${key}` } }
+    );
+    const statusData = await statusRes.json();
+    if (statusData.status === 'COMPLETED') {
+      const resultRes = await fetch(
+        `https://queue.fal.run/${endpoint}/requests/${requestId}`,
+        { headers: { 'Authorization': `Key ${key}` } }
+      );
+      return await resultRes.json();
+    }
+    if (statusData.status === 'FAILED') throw new Error('Generation failed: ' + JSON.stringify(statusData));
+  }
+  throw new Error('Timeout waiting for fal result');
 }
 
 
@@ -1444,18 +1440,16 @@ Return ONLY a JSON array of exactly 6 objects:
   const charUrl = acc?.characterUrl || null;
   const hasLoRA = !!acc?.loraPath;
 
-  await Promise.all(Array.from({ length: 6 }, (_, i) => generateSlide(i, hook, arch, falKey, acc, charUrl, hasLoRA)));
+  // Generate slides sequentially — parallel causes Vercel concurrency timeout
+  for (let i = 0; i < 6; i++) {
+    await generateSlide(i, hook, arch, falKey, acc, charUrl, hasLoRA);
+  }
 
   setLog('All slides generated.', 'ok');
   setProgress(100, '6/6 slides complete');
   if (btn) { btn.disabled = false; btn.textContent = '✦ Generate all 6 slides'; }
   document.getElementById('caption-btn').disabled = false;
   showToast('All 6 slides generated!', 'success');
-  // Persist generated images (https:// URLs only — skip base64 to avoid size issues)
-  try {
-    const toSave = generatedImages.map(u => (u && u.startsWith('http')) ? u : null);
-    sessionStorage.setItem('larry_images', JSON.stringify(toSave));
-  } catch(e) { /* sessionStorage full — skip */ }
 }
 
 async function generateSlide(i, hook, arch, falKey, acc, charUrl, hasLoRA) {
@@ -1571,7 +1565,6 @@ Return ONLY the caption text followed by hashtags. No preamble.`;
     const formatted = text.replace(/(#\w+)/g, '<span class="hashtag">$1</span>');
     document.getElementById('caption-output').innerHTML = formatted;
     document.getElementById('caption-card').style.display = 'block';
-    document.getElementById('voiceover-card').style.display = 'block';
     showToast('Caption generated', 'success');
   } catch (e) {
     showToast('Caption error: ' + e.message, 'error');
@@ -2357,20 +2350,15 @@ async function bulkGenerate() {
       const fullPrompt = `${arch} ${styleDesc} Style: photorealistic documentary portrait photography. Negative: ${negativePrompt}`;
 
       try {
-        const falData = await callFal('fal-ai/realistic-vision/v6', {
-          model_name: 'SG161222/Realistic_Vision_V6.0_B1_noVAE',
-          prompt: fullPrompt,
-          negative_prompt: RV_NEGATIVE,
-          image_size: { width: 832, height: 1216 },
-          num_inference_steps: 35,
-          guidance_scale: 5,
-          num_images: 1,
-          enable_safety_checker: false,
-          format: 'png',
-          loras: [],
-        }, getFalKey());
-        if (!falData.images?.[0]?.url) throw new Error(JSON.stringify(falData.error || 'No image'));
-        images.push({ url: falData.images[0].url, label: variant.label, slideNum: i + 1, isFirst });
+        const res = await fetch('https://api.openai.com/v1/images/generations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${oaiKey}` },
+          body: JSON.stringify({ model: 'gpt-image-1', prompt: fullPrompt, n: 1, size: '1024x1536' })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+        const url = data.data[0].url || `data:image/png;base64,${data.data[0].b64_json}`;
+        images.push({ url, label: variant.label, slideNum: i + 1, isFirst });
         bulkLog(`  Slide ${i+1} ✓`, 'ok');
       } catch(e) {
         bulkLog(`  Slide ${i+1} failed: ${e.message}`, 'err');
@@ -2505,7 +2493,7 @@ async function compositeTextOnImage(imageUrl, text, slideIndex, slideLabel) {
         ctx.fillText(l, xAnchor, startY + li * lineHeight);
       });
 
-      resolve(canvas.toDataURL('image/jpeg', 0.85));
+      resolve(canvas.toDataURL('image/png'));
     };
     img.onerror = () => resolve(imageUrl);
     img.src = imageUrl;
@@ -2521,89 +2509,12 @@ function showToast(msg, type = '') {
   setTimeout(() => t.className = 'toast', 3000);
 }
 
-
-// ─── ELEVENLABS ───────────────────────────────────────────────────────────────
-function saveElevenKey() {
-  const key = document.getElementById('eleven-key')?.value?.trim();
-  if (key) localStorage.setItem('larry_eleven', key);
-}
-
-function getElevenKey() {
-  return document.getElementById('eleven-key')?.value?.trim() || localStorage.getItem('larry_eleven') || '';
-}
-
-async function loadElevenVoices() {
-  const key = getElevenKey();
-  if (!key) { showToast('Add ElevenLabs key first', 'error'); return; }
-  try {
-    const res = await fetch('/api/elevenlabs', { headers: { 'x-eleven-key': key } });
-    const data = await res.json();
-    const sel = document.getElementById('eleven-voice-select');
-    if (!sel) return;
-    const voices = data.voices || [];
-    sel.innerHTML = voices.map(v => `<option value="${v.voice_id}">${v.name}</option>`).join('');
-    if (voices.length) showToast(`${voices.length} voices loaded`, 'success');
-  } catch(e) { showToast('Voices error: ' + e.message, 'error'); }
-}
-
-function useCaptionAsScript() {
-  const caption = document.getElementById('caption-output')?.innerText || '';
-  const script = document.getElementById('voiceover-script');
-  if (script) script.value = caption.replace(/#\w+/g, '').trim();
-}
-
-async function generateVoiceover() {
-  const key = getElevenKey();
-  if (!key) { showToast('Add ElevenLabs key in header', 'error'); return; }
-  const voiceId = document.getElementById('eleven-voice-select')?.value;
-  if (!voiceId) { showToast('Select a voice first', 'error'); return; }
-  const text = document.getElementById('voiceover-script')?.value?.trim();
-  if (!text) { showToast('Enter a script first', 'error'); return; }
-  const btn = document.getElementById('voiceover-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
-  try {
-    const res = await fetch('/api/elevenlabs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-eleven-key': key },
-      body: JSON.stringify({ voice_id: voiceId, text })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(JSON.stringify(data.error));
-    const audioSrc = `data:audio/mpeg;base64,${data.audio_base64}`;
-    const audio = document.getElementById('voiceover-audio');
-    const dl = document.getElementById('voiceover-download');
-    if (audio) audio.src = audioSrc;
-    if (dl) dl.href = audioSrc;
-    document.getElementById('voiceover-result').style.display = 'block';
-    showToast('Voiceover ready!', 'success');
-  } catch(e) { showToast('Voiceover error: ' + e.message, 'error'); }
-  if (btn) { btn.disabled = false; btn.textContent = 'Generate voiceover'; }
-}
-
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 loadSavedKeys();
 renderPerfTable();
 renderAccounts();
 renderAccountSelector();
 handleTikTokCallback();
-// Restore generated images from sessionStorage if available
-try {
-  const saved = sessionStorage.getItem('larry_images');
-  if (saved) {
-    const parsed = JSON.parse(saved);
-    if (Array.isArray(parsed) && parsed.some(Boolean)) {
-      generatedImages = parsed;
-      renderSlidePreviewPlaceholders();
-      parsed.forEach((url, i) => {
-        const cell = document.getElementById('slide-cell-' + i);
-        if (cell && url) {
-          cell.innerHTML = '<div class="slide-n">' + (i+1) + '</div><img src="' + url + '" style="width:100%;height:100%;object-fit:cover;" /><div class="style-tag">restored</div>';
-        }
-      });
-      document.getElementById('caption-btn').disabled = false;
-    }
-  }
-} catch(e) { /* ignore */ }
 
 function handleTikTokCallback() {
   const params = new URLSearchParams(window.location.search);
@@ -2640,7 +2551,7 @@ function handleTikTokCallback() {
         connectedAccounts[existing] = { label, desc, skinType, characterUrl, token, openId };
         showToast('Account updated: ' + label, 'success');
       } else {
-        connectedAccounts.push({ label, desc, skinType, characterUrl, token, openId, refreshToken, expiresAt });
+        connectedAccounts.push({ label, desc, skinType, characterUrl, token, openId });
         showToast('Account connected: ' + label, 'success');
       }
     }
