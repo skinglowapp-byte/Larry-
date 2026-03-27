@@ -318,6 +318,7 @@
   }
   .slide-cell {
     aspect-ratio: 9/16;
+    min-height: 180px;
     border-radius: 8px;
     border: 1px solid var(--border);
     background: #111;
@@ -2567,60 +2568,97 @@ async function compositeTextOnImage(imageUrl, text, slideIndex, slideLabel) {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
+      // Force 9:16 canvas — pad or crop to portrait if image is wrong ratio
+      const targetRatio = 9 / 16;
+      const imgRatio = img.width / img.height;
+      let canvasW, canvasH, drawX, drawY, drawW, drawH;
+
+      if (Math.abs(imgRatio - targetRatio) < 0.05) {
+        // Already close to 9:16 — use as-is
+        canvasW = img.width; canvasH = img.height;
+        drawX = 0; drawY = 0; drawW = img.width; drawH = img.height;
+      } else if (imgRatio > targetRatio) {
+        // Wider than 9:16 — crop sides
+        canvasH = img.height; canvasW = Math.round(img.height * targetRatio);
+        drawX = -Math.round((img.width - canvasW) / 2); drawY = 0;
+        drawW = img.width; drawH = img.height;
+      } else {
+        // Taller than 9:16 — pad sides with black
+        canvasW = img.width; canvasH = Math.round(img.width / targetRatio);
+        drawX = 0; drawY = Math.round((canvasH - img.height) / 2);
+        drawW = img.width; drawH = img.height;
+      }
+
       const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
+      canvas.width = canvasW;
+      canvas.height = canvasH;
       const ctx = canvas.getContext('2d');
 
-      ctx.drawImage(img, 0, 0);
+      // Black background for padding
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvasW, canvasH);
+      ctx.drawImage(img, drawX, drawY, drawW, drawH);
 
-      // Font size based on placement size hint
+      // Semi-transparent gradient behind text for readability
+      const gradH = canvasH * 0.35;
+      const gradY = placement.y < 0.5 ? 0 : canvasH - gradH;
+      const grad = ctx.createLinearGradient(0, gradY, 0, gradY + gradH);
+      grad.addColorStop(0, placement.y < 0.5 ? 'rgba(0,0,0,0.65)' : 'rgba(0,0,0,0)');
+      grad.addColorStop(1, placement.y < 0.5 ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,0.65)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, gradY, canvasW, gradH);
+
+      // Auto-shrink font until text fits within safe zone (88% width, max 40% height)
+      const safeW = canvasW * 0.88;
+      const safeMaxH = canvasH * 0.40;
       const sizeMap = { small: 0.052, medium: 0.062, large: 0.075 };
-      const sizeFactor = sizeMap[placement.size] || 0.062;
-      const wordCount = text.split(' ').length;
-      const shrink = wordCount > 10 ? 0.72 : wordCount > 7 ? 0.82 : wordCount > 5 ? 0.92 : 1;
-      const fontSize = Math.round(img.width * sizeFactor * shrink);
-      ctx.font = `700 ${fontSize}px -apple-system, "Helvetica Neue", Arial, sans-serif`;
+      let sizeFactor = sizeMap[placement.size] || 0.062;
+      let fontSize, lines, lineHeight, totalHeight;
+
+      // Iteratively shrink font until all lines fit
+      for (let attempt = 0; attempt < 8; attempt++) {
+        fontSize = Math.round(canvasW * sizeFactor);
+        ctx.font = `700 ${fontSize}px -apple-system, "Helvetica Neue", Arial, sans-serif`;
+        
+        // Word wrap
+        const words = text.split(' ');
+        lines = [];
+        let line = '';
+        for (const word of words) {
+          const test = line ? line + ' ' + word : word;
+          if (ctx.measureText(test).width > safeW && line) {
+            lines.push(line);
+            line = word;
+          } else {
+            line = test;
+          }
+        }
+        if (line) lines.push(line);
+
+        lineHeight = fontSize * 1.3;
+        totalHeight = lines.length * lineHeight;
+
+        // Check all lines fit in width and total height fits
+        const maxLineW = Math.max(...lines.map(l => ctx.measureText(l).width));
+        if (maxLineW <= safeW && totalHeight <= safeMaxH) break;
+        sizeFactor *= 0.85; // shrink 15% each attempt
+      }
+
       ctx.textAlign = placement.align || 'center';
       ctx.fillStyle = 'white';
-      ctx.shadowColor = 'rgba(0,0,0,0.9)';
-      ctx.shadowBlur = 16;
+      ctx.shadowColor = 'rgba(0,0,0,0.95)';
+      ctx.shadowBlur = 18;
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 2;
 
-      // Word wrap — wider to fit long hooks
-      const words = text.split(' ');
-      const maxWidth = img.width * (placement.align === 'center' ? 0.88 : 0.65);
-      const lines = [];
-      let line = '';
-      for (const word of words) {
-        const test = line ? line + ' ' + word : word;
-        if (ctx.measureText(test).width > maxWidth && line) {
-          lines.push(line);
-          line = word;
-        } else {
-          line = test;
-        }
-      }
-      if (line) lines.push(line);
-
-      const lineHeight = fontSize * 1.3;
-      const totalHeight = lines.length * lineHeight;
-
-      // X anchor based on alignment
-      const xAnchor = placement.align === 'left'
-        ? img.width * placement.x
-        : placement.align === 'right'
-          ? img.width * placement.x
-          : img.width * placement.x;
-
-      const startY = img.height * placement.y - totalHeight / 2 + fontSize;
+      const xAnchor = canvasW * placement.x;
+      const startY = canvasH * placement.y - totalHeight / 2 + fontSize;
 
       lines.forEach((l, li) => {
         ctx.fillText(l, xAnchor, startY + li * lineHeight);
       });
 
-      resolve(canvas.toDataURL('image/jpeg', 0.85)); // JPEG 85% — ~10x smaller than PNG
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
     };
     img.onerror = () => resolve(imageUrl);
     img.src = imageUrl;
