@@ -2540,13 +2540,16 @@ async function getTextPlacement(text, slideIndex, slideLabel) {
 Slide ${slideIndex + 1}: "${slideLabel}"
 Text to place: "${text}"
 
-Decide the best position for this text overlay. Consider:
-- Hook text (slide 1) often works well upper-center or center
-- Short words like "and this" / "to this" work well offset (not centered)
-- Later slides can vary — bottom, top, or side
-- Avoid covering the face/skin which is the focal point
+Decide the best position for this text overlay. CRITICAL RULES:
+- y must be between 0.15 and 0.72 — TikTok UI covers the top 10% and bottom 22% of the screen
+- Hook text (slide 1): y=0.25 to 0.40, centered, large
+- Struggle/emotional slides: y=0.65 to 0.72, centered or left, small
+- App discovery slides: y=0.55 to 0.68, centered, medium
+- Progress slides: y=0.60 to 0.72, centered, small or medium
+- NEVER use y below 0.72 — that area is hidden by TikTok username and progress bar
+- NEVER use y above 0.15 — that area is hidden by device status bar
 
-Return ONLY a JSON object: {"x": 0.0-1.0, "y": 0.0-1.0, "align": "left"|"center"|"right", "size": "small"|"medium"|"large"}
+Return ONLY a JSON object: {"x": 0.0-1.0, "y": 0.15-0.72, "align": "left"|"center"|"right", "size": "small"|"medium"|"large"}
 x=0.5 y=0.5 is center. x=0 is left edge, x=1 is right edge. y=0 is top, y=1 is bottom.` }]
       })
     });
@@ -2556,12 +2559,12 @@ x=0.5 y=0.5 is center. x=0 is left edge, x=1 is right edge. y=0 is top, y=1 is b
   } catch(e) {
     // Fallback positions
     const fallbacks = [
-      { x: 0.5, y: 0.35, align: 'center', size: 'large' },
-      { x: 0.7, y: 0.8, align: 'right', size: 'small' },
-      { x: 0.3, y: 0.7, align: 'left', size: 'small' },
-      { x: 0.5, y: 0.2, align: 'center', size: 'medium' },
-      { x: 0.5, y: 0.8, align: 'center', size: 'medium' },
-      { x: 0.5, y: 0.75, align: 'center', size: 'medium' },
+      { x: 0.5, y: 0.30, align: 'center', size: 'large' },   // slide 1 hook — upper third
+      { x: 0.5, y: 0.68, align: 'center', size: 'small' },   // slide 2 struggle
+      { x: 0.5, y: 0.62, align: 'center', size: 'small' },   // slide 3 discovery
+      { x: 0.5, y: 0.65, align: 'center', size: 'medium' },  // slide 4 progress
+      { x: 0.5, y: 0.65, align: 'center', size: 'medium' },  // slide 5 progress
+      { x: 0.5, y: 0.68, align: 'center', size: 'medium' },  // slide 6 after
     ];
     return fallbacks[slideIndex] || { x: 0.5, y: 0.75, align: 'center', size: 'medium' };
   }
@@ -2660,7 +2663,22 @@ async function compositeTextOnImage(imageUrl, text, slideIndex, slideLabel) {
       ctx.shadowOffsetY = 2;
 
       const xAnchor = canvasW * placement.x;
-      const startY = canvasH * placement.y - totalHeight / 2 + fontSize;
+
+      // TikTok UI covers bottom ~18% of screen — clamp text into safe zone
+      // Top safe: 8% from top (avoids clock/status bar area in slideshow view)
+      // Bottom safe: 78% from top (avoids TikTok progress bar, username, caption)
+      const safeTopY = canvasH * 0.08 + fontSize;
+      const safeBottomY = canvasH * 0.78;
+
+      // Place text centered on placement.y, then clamp so it never goes out of bounds
+      let startY = canvasH * placement.y - totalHeight / 2 + fontSize;
+      // Clamp top
+      if (startY < safeTopY) startY = safeTopY;
+      // Clamp bottom — ensure last line fits before TikTok UI
+      const lastLineY = startY + (lines.length - 1) * lineHeight;
+      if (lastLineY > safeBottomY) startY = safeBottomY - (lines.length - 1) * lineHeight;
+      // Final top clamp after bottom adjustment
+      if (startY < safeTopY) startY = safeTopY;
 
       lines.forEach((l, li) => {
         ctx.fillText(l, xAnchor, startY + li * lineHeight);
