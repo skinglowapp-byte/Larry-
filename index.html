@@ -1440,7 +1440,7 @@ Return ONLY a JSON array of exactly 6 objects:
   const charUrl = acc?.characterUrl || null;
   const hasLoRA = !!acc?.loraPath;
 
-  // Generate slides sequentially — parallel causes Vercel concurrency timeout
+  // Sequential — each slide gets its own clean 60s window with fal.run
   for (let i = 0; i < 6; i++) {
     await generateSlide(i, hook, arch, falKey, acc, charUrl, hasLoRA);
   }
