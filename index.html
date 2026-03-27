@@ -2219,8 +2219,8 @@ function renderAccounts() {
           <button onclick="connectTikTokToExisting(${i})" style="font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid rgba(200,255,90,0.4);background:none;color:${acc.openId ? '#4ade80' : 'var(--accent)'};cursor:pointer;white-space:nowrap;">${acc.openId ? '✓ Reconnect TikTok' : 'Connect TikTok'}</button>
           ${!acc.loraPath ? `
             <div style="margin-top:6px;">
-              <button onclick="window.open('https://fal.ai/models', '_blank')" style="font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:none;color:var(--muted);cursor:pointer;white-space:nowrap;">⚡ Train LoRA on fal.ai ↗</button>
-              <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5;">Train on <a href="https://fal.ai/models" target="_blank" style="color:var(--accent);text-decoration:none;">fal.ai</a>, then paste the model URL below.</div>
+              <button onclick="window.open('https://fal.ai/models/fal-ai/flux-lora-fast-training', '_blank')" style="font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:none;color:var(--muted);cursor:pointer;white-space:nowrap;">⚡ Train LoRA on fal.ai ↗</button>
+              <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5;">Train on <a href="https://fal.ai/models/fal-ai/flux-lora-fast-training" target="_blank" style="color:var(--accent);text-decoration:none;">fal.ai</a>, then paste the model URL below.</div>
               <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
                 <input type="text" id="lora-url-${i}" placeholder="Paste trained LoRA URL here..." 
                   style="font-size:11px;padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:#111;color:var(--white);font-family:DM Mono,monospace;flex:1;margin:0;"
