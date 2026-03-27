@@ -1664,6 +1664,14 @@ async function postDirectToTikTok(mode) {
   const activeBtn = isLive ? liveBtn : draftBtn;
   if (activeBtn) activeBtn.textContent = isLive ? 'Posting...' : 'Saving to drafts...';
 
+  // Check token expiry — TikTok tokens last 24h
+  if (acc.expiresAt && Date.now() > acc.expiresAt) {
+    showToast('TikTok token expired — please reconnect your account in the Accounts tab', 'error');
+    if (draftBtn) { draftBtn.disabled = false; draftBtn.textContent = '⬆ Save to Drafts'; }
+    if (liveBtn) { liveBtn.disabled = false; liveBtn.textContent = '✦ Post Live'; }
+    return;
+  }
+
   try {
     const res = await fetch('/api/tiktok-auth', {
       method: 'POST',
