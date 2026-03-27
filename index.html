@@ -1283,25 +1283,25 @@ const RV_NEGATIVE = 'cartoon, anime, illustration, painting, drawing, cgi, 3d re
 // Pass 1: Generate with FLUX Dev via fal-ai/flux-lora
 // FLUX architecture — far superior skin texture and photorealism vs SD-based models
 function buildRVBody(prompt, charUrl, hasLoRA, loraPath, loraTrigger, slideIndex) {
-  // Realism LoRA scale: higher on early slides (raw/distressed skin needs more texture push),
-  // slightly lower on later slides so LoRA face consistency wins over realism style
-  const realismScale = (slideIndex !== undefined && slideIndex >= 3) ? 0.65 : 0.8;
+  // Match the settings that produced realistic results in FAL testing:
+  // guidance_scale 1.8 = messy/candid, steps 28 = less polished
+  const basePrompt = hasLoRA && loraTrigger ? `${loraTrigger}, ${prompt}` : prompt;
 
+  // Add realism anchors to prompt — same ones that worked in FAL tests
+  const realismSuffix = ', slightly looking away from camera, candid unaware expression, harsh unflattering light, slightly awkward pose, slightly grainy, imperfect exposure, real environment not staged';
+  
   const input = {
-    prompt: hasLoRA && loraTrigger ? `${loraTrigger}, ${prompt}` : prompt,
-    image_size: { width: 768, height: 1360 }, // tall portrait — better face consistency than portrait_4_3
-    num_inference_steps: 35, // more steps = better adherence to prompt detail on mid/late slides
-    guidance_scale: 4.5,    // higher CFG = FLUX follows prompt more strictly, less generic face drift
+    prompt: basePrompt + realismSuffix,
+    image_size: { width: 768, height: 1360 },
+    num_inference_steps: 28,
+    guidance_scale: 1.8,
     num_images: 1,
     output_format: 'jpeg',
     enable_safety_checker: false,
-    loras: [
-      // Realism LoRA — texture and photographic quality
-      { path: 'https://huggingface.co/XLabs-AI/flux-RealismLora/resolve/main/lora.safetensors', scale: realismScale }
-    ],
+    loras: [],
   };
 
-  // Account LoRA — face consistency, scale higher than realism so face wins
+  // Account LoRA — face consistency
   if (hasLoRA && loraPath) {
     input.loras.push({ path: loraPath, scale: 0.9 });
     if (loraTrigger) input.prompt = `${loraTrigger}, ${input.prompt}`;
