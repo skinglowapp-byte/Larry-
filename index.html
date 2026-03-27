@@ -523,9 +523,26 @@
     Larry
     <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);font-style:normal;margin-left:4px;">/ TikTok Slideshow</span>
   </div>
+
 </header>
 
-<div style="position:sticky;top:0;z-index:50;background:#0e0e0e;padding:12px 32px 10px;">
+<div class="layout">
+  <aside>
+    <div class="sidebar-section">Workflow</div>
+    <button class="nav-item active" onclick="nav('setup')"><span class="icon">⚙</span> Setup</button>
+    <button class="nav-item" onclick="nav('hooks')"><span class="icon">🎣</span> Hook Generator</button>
+    <button class="nav-item" onclick="nav('generate')"><span class="icon">✦</span> Generate Slideshow</button>
+    <button class="nav-item" onclick="nav('accounts')"><span class="icon">👤</span> Accounts</button>
+    <button class="nav-item" onclick="nav('performance')"><span class="icon">📈</span> Performance Log</button>
+    <button class="nav-item" onclick="nav('schedule')"><span class="icon">🕐</span> Scheduler</button>
+
+    <div class="sidebar-section" style="margin-top:8px;">Docs</div>
+    <button class="nav-item" style="font-size:12px;" onclick="openLink('https://platform.openai.com')"><span class="icon">↗</span> OpenAI platform</button>
+
+  </aside>
+
+  <main>
+  <div style="position:sticky;top:0;z-index:50;background:#0e0e0e;padding:12px 0 10px;margin-bottom:10px;">
   <div style="background:#161616;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px 18px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
     <div style="flex:1;min-width:180px;">
       <div style="font-family:DM Mono,monospace;font-size:10px;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">FAL API Key (images)</div>
@@ -545,24 +562,7 @@
       Connect TikTok
     </a>
   </div>
-</div>
-
-<div class="layout">
-  <aside>
-    <div class="sidebar-section">Workflow</div>
-    <button class="nav-item active" onclick="nav('setup')"><span class="icon">⚙</span> Setup</button>
-    <button class="nav-item" onclick="nav('hooks')"><span class="icon">🎣</span> Hook Generator</button>
-    <button class="nav-item" onclick="nav('generate')"><span class="icon">✦</span> Generate Slideshow</button>
-    <button class="nav-item" onclick="nav('accounts')"><span class="icon">👤</span> Accounts</button>
-    <button class="nav-item" onclick="nav('performance')"><span class="icon">📈</span> Performance Log</button>
-    <button class="nav-item" onclick="nav('schedule')"><span class="icon">🕐</span> Scheduler</button>
-
-    <div class="sidebar-section" style="margin-top:8px;">Docs</div>
-    <button class="nav-item" style="font-size:12px;" onclick="openLink('https://platform.openai.com')"><span class="icon">↗</span> OpenAI platform</button>
-
-  </aside>
-
-  <main>
+  </div>
 
     <!-- SETUP PANE -->
     <div class="pane active" id="pane-setup">
@@ -742,16 +742,16 @@
         <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5;">Generate an AI voiceover from your caption. Add ElevenLabs key in the header first.</div>
         <div style="display:flex;gap:10px;margin-bottom:12px;align-items:center;">
           <select id="eleven-voice-select" style="flex:1;margin-bottom:0;"><option value="">— Load voices first —</option></select>
-          <button class="btn btn-ghost" style="font-size:12px;white-space:nowrap;flex-shrink:0;" onclick="loadElevenVoices()">↻ Voices</button>
+          <button class="btn btn-ghost" style="font-size:12px;white-space:nowrap;flex-shrink:0;" onclick="loadElevenVoices()">&#8635; Voices</button>
         </div>
         <textarea id="voiceover-script" rows="3" placeholder="Paste script or use caption..." style="margin-bottom:10px;"></textarea>
         <div style="display:flex;gap:10px;">
           <button class="btn btn-ghost" style="font-size:12px;" onclick="useCaptionAsScript()">Use caption</button>
-          <button class="btn btn-primary" style="flex:1;" onclick="generateVoiceover()" id="voiceover-btn">🎙 Generate voiceover</button>
+          <button class="btn btn-primary" style="flex:1;" onclick="generateVoiceover()" id="voiceover-btn">&#127897; Generate voiceover</button>
         </div>
         <div id="voiceover-result" style="display:none;margin-top:12px;">
           <audio id="voiceover-audio" controls style="width:100%;margin-bottom:8px;"></audio>
-          <a id="voiceover-download" download="voiceover.mp3" style="font-size:12px;color:var(--accent);cursor:pointer;text-decoration:none;">↓ Download MP3</a>
+          <a id="voiceover-download" download="voiceover.mp3" style="font-size:12px;color:var(--accent);cursor:pointer;text-decoration:none;">&#8595; Download MP3</a>
         </div>
       </div>
 
@@ -976,9 +976,9 @@ function nav(name) {
   document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('pane-' + name).classList.add('active');
-  const navItems = document.querySelectorAll('.nav-item');
-  const map = { setup: 0, hooks: 1, generate: 2, accounts: 3, performance: 4, schedule: 5 };
-  const idx = map[name]; if (idx !== undefined && idx >= 0 && navItems[idx]) navItems[idx].classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') === `nav('${name}')`) n.classList.add('active');
+  });
   if (name === 'hooks') syncHookContext();
   if (name === 'generate') { syncGenHook(); renderSlidePreviewPlaceholders(); renderAccountSelector(); }
   if (name === 'performance') renderPerfTable();
@@ -2357,15 +2357,20 @@ async function bulkGenerate() {
       const fullPrompt = `${arch} ${styleDesc} Style: photorealistic documentary portrait photography. Negative: ${negativePrompt}`;
 
       try {
-        const res = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${oaiKey}` },
-          body: JSON.stringify({ model: 'gpt-image-1', prompt: fullPrompt, n: 1, size: '1024x1536' })
-        });
-        const data = await res.json();
-        if (data.error) throw new Error(data.error.message);
-        const url = data.data[0].url || `data:image/png;base64,${data.data[0].b64_json}`;
-        images.push({ url, label: variant.label, slideNum: i + 1, isFirst });
+        const falData = await callFal('fal-ai/realistic-vision/v6', {
+          model_name: 'SG161222/Realistic_Vision_V6.0_B1_noVAE',
+          prompt: fullPrompt,
+          negative_prompt: RV_NEGATIVE,
+          image_size: { width: 832, height: 1216 },
+          num_inference_steps: 35,
+          guidance_scale: 5,
+          num_images: 1,
+          enable_safety_checker: false,
+          format: 'png',
+          loras: [],
+        }, getFalKey());
+        if (!falData.images?.[0]?.url) throw new Error(JSON.stringify(falData.error || 'No image'));
+        images.push({ url: falData.images[0].url, label: variant.label, slideNum: i + 1, isFirst });
         bulkLog(`  Slide ${i+1} ✓`, 'ok');
       } catch(e) {
         bulkLog(`  Slide ${i+1} failed: ${e.message}`, 'err');
@@ -2555,7 +2560,7 @@ async function generateVoiceover() {
   const text = document.getElementById('voiceover-script')?.value?.trim();
   if (!text) { showToast('Enter a script first', 'error'); return; }
   const btn = document.getElementById('voiceover-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generating...'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
   try {
     const res = await fetch('/api/elevenlabs', {
       method: 'POST',
@@ -2572,7 +2577,7 @@ async function generateVoiceover() {
     document.getElementById('voiceover-result').style.display = 'block';
     showToast('Voiceover ready!', 'success');
   } catch(e) { showToast('Voiceover error: ' + e.message, 'error'); }
-  if (btn) { btn.disabled = false; btn.textContent = '🎙 Generate voiceover'; }
+  if (btn) { btn.disabled = false; btn.textContent = 'Generate voiceover'; }
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
@@ -2581,6 +2586,24 @@ renderPerfTable();
 renderAccounts();
 renderAccountSelector();
 handleTikTokCallback();
+// Restore generated images from sessionStorage if available
+try {
+  const saved = sessionStorage.getItem('larry_images');
+  if (saved) {
+    const parsed = JSON.parse(saved);
+    if (Array.isArray(parsed) && parsed.some(Boolean)) {
+      generatedImages = parsed;
+      renderSlidePreviewPlaceholders();
+      parsed.forEach((url, i) => {
+        const cell = document.getElementById('slide-cell-' + i);
+        if (cell && url) {
+          cell.innerHTML = '<div class="slide-n">' + (i+1) + '</div><img src="' + url + '" style="width:100%;height:100%;object-fit:cover;" /><div class="style-tag">restored</div>';
+        }
+      });
+      document.getElementById('caption-btn').disabled = false;
+    }
+  }
+} catch(e) { /* ignore */ }
 
 function handleTikTokCallback() {
   const params = new URLSearchParams(window.location.search);
@@ -2588,8 +2611,6 @@ function handleTikTokCallback() {
   if (params.get('tiktok_connected')) {
     const token = params.get('tiktok_token');
     const openId = params.get('tiktok_open_id');
-    const refreshToken = params.get('tiktok_refresh_token') || '';
-    const expiresAt = parseInt(params.get('tiktok_expires_at')) || 0;
     
     // Get pending label from localStorage
     const label = localStorage.getItem('pending_account_label') || 'TikTok Account ' + (connectedAccounts.length + 1);
@@ -2610,8 +2631,6 @@ function handleTikTokCallback() {
       if (connectedAccounts[idx]) {
         connectedAccounts[idx].token = token;
         connectedAccounts[idx].openId = openId;
-        connectedAccounts[idx].refreshToken = refreshToken;
-        connectedAccounts[idx].expiresAt = expiresAt;
         showToast('TikTok connected to ' + connectedAccounts[idx].label, 'success');
       }
     } else {
