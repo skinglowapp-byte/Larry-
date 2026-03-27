@@ -1040,12 +1040,12 @@ function renderStyleInputs() {
 
 function resetStyles() {
   styleVariants = [
-    { label: 'Before (flare state)', style: 'Visibly irritated skin. Redness across cheeks and nose, dry flaky patches, slight swelling around the eyes. Looks uncomfortable and inflamed. Relatable, not dramatic.' },
-    { label: 'Week 1 — calming', style: 'Skin slightly calmer. Redness beginning to reduce, less flaking, still uneven tone. Hydration starting to show. Early improvement, subtle.' },
-    { label: 'Week 2 — settling', style: 'Noticeably less inflammation. Cheeks less red, skin looks more hydrated and plump. Some uneven patches remain but overall calmer.' },
-    { label: 'Week 3 — clearer', style: 'Clear improvement. Redness mostly gone, skin texture smoother. Small marks still fading. Looks genuinely better — not edited, just healthier.' },
-    { label: 'Week 4 — glowing', style: 'Calm even-toned skin. No redness but pores, freckles and fine lines all visible. Looks healthy on a real person, not a model. Natural phone camera lighting.' },
-    { label: 'After — transformed', style: 'Healthy settled skin. Slight natural unevenness still present, pores and peach fuzz visible. Looks like a real good skin day — believable, not airbrushed.' },
+    { label: 'Before (flare state)', style: 'Active rosacea and eczema flare. Intense redness and inflammation across cheeks and nose, visibly irritated and reactive skin, dry flaking patches, broken capillaries visible under skin, slight swelling around eyes, skin looks raw and uncomfortable. Glistening moisture from irritated skin. Ultra-detailed pores, every imperfection visible. No makeup whatsoever.' },
+    { label: 'Week 1 — calming', style: 'Early improvement from active flare. Redness slightly reduced but still very present, flaking subsiding, skin still reactive and sensitive. Visible pores, natural skin oils beginning to balance. Slight relief visible in expression — skin less angry. Ultra-detailed skin texture, every pore and blemish visible, raw unedited.' },
+    { label: 'Week 2 — settling', style: 'Meaningful improvement. Redness reduced to patches rather than full flush, dry areas mostly healed, skin texture more even. Natural sebum balanced, pores visible but less inflamed. Slight healthy moisture returning. Real skin texture — freckles, fine lines, pores all visible. No retouching.' },
+    { label: 'Week 3 — clearer', style: 'Clear skin emerging. Only faint redness remains on nose bridge, overall tone much more even, texture noticeably smoother. Every pore still visible, peach fuzz on skin, subtle freckles, minor blemish marks still fading. Looks genuinely better, not edited better. Still clearly real skin.' },
+    { label: 'Week 4 — glowing', style: 'Calm settled skin. Even skin tone, no active inflammation, naturally hydrated. Ultra-detailed: every pore, fine line, and freckle fully visible. Small imperfections still present. Looks healthy and real, not perfect. Natural skin sheen from moisture not filters. Ordinary home lighting.' },
+    { label: 'After — transformed', style: 'Healthy calm skin with full visible texture. No redness or irritation but pores, peach fuzz, subtle freckles and fine lines all clearly visible. Skin looks like a real person on a good skin day — not a model, not airbrushed. Slight natural unevenness in tone. Phone camera, no beauty filter.' },
   ];
   renderStyleInputs();
 }
@@ -1335,30 +1335,82 @@ function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex) {
   const type = planEntry?.type || 'selfie';
   const scene = planEntry?.scene || '';
   const skinState = planEntry?.skin_state || styleDesc;
-  const qualityPrefix = 'photorealistic, raw phone camera photo, slightly imperfect framing, authentic UGC, no filters, ultra-detailed skin texture,';
-  const lightings = ['harsh bathroom overhead light','dim bedroom light, slightly underexposed','bright window light casting natural shadows','mixed warm indoor lighting','natural daylight from window','car visor mirror light, slightly washed out'];
+
+  // Strip any SD weighted syntax from arch (e.g. "(best quality:1.4)") — FLUX ignores it
+  // Keep all the descriptive content — it's valid natural language for FLUX
+  const archClean = (arch || '').replace(/\([^)]+:\d+(\.\d+)?\)/g, '').replace(/\s+/g, ' ').trim();
+
+  // UGC camera authenticity — these prompts are what make FLUX output look like real phone footage
+  const cameras = [
+    'shot on iPhone 13, slightly grainy sensor, auto-exposure',
+    'shot on Samsung Galaxy, slight lens distortion, auto-HDR',
+    'shot on iPhone, front camera, slight bokeh compression',
+    'shot on phone camera, slightly overexposed highlights, authentic',
+    'candid iPhone photo, slight motion blur, real lighting',
+    'shot on smartphone, natural noise grain, no post-processing',
+  ];
+  const camera = cameras[slideIndex % cameras.length];
+
+  const lightings = [
+    'harsh overhead bathroom LED, slight overexposure on forehead',
+    'dim bedroom lamp, underexposed shadows, warm yellow cast',
+    'bright window sidelight, natural soft shadows across face',
+    'mixed indoor lighting, slight green cast from overhead light',
+    'natural daylight from window, flat even light',
+    'car sun visor mirror, washed-out daylight, slightly squinting',
+  ];
   const lighting = lightings[slideIndex % lightings.length];
-  const framings = ['close-up face and shoulders, slightly off-centre','waist-up, arm visible holding phone','three-quarter shot, cluttered background visible','tight face close-up, slightly shaky','medium shot, person slightly to one side','shoulder-up, casual tilt'];
+
+  const framings = [
+    'close-up face and shoulders, slightly off-centre framing',
+    'waist-up selfie, arm extended holding phone, slight angle',
+    'three-quarter shot, cluttered background slightly out of focus',
+    'tight face close-up, slightly shaky hand-held',
+    'medium shot, person slightly to one side of frame',
+    'shoulder-up, casual head tilt, relaxed expression',
+  ];
   const framing = framings[slideIndex % framings.length];
-  const outfits = ['wearing an oversized hoodie','wearing a baggy t-shirt, hair messy or tied up','wearing a pyjama top or casual tank top','wearing a plain sweatshirt, no styling','wearing a basic tee, no jewellery','wearing an old comfy jumper'];
+
+  const outfits = [
+    'wearing an oversized hoodie, no styling',
+    'wearing a baggy t-shirt, hair messy or in a bun',
+    'wearing a pyjama top or casual tank top',
+    'wearing a plain sweatshirt, no jewellery',
+    'wearing a basic tee, hair down natural',
+    'wearing an old comfy jumper, no makeup',
+  ];
   const outfit = outfits[slideIndex % outfits.length];
+
+  const qualityPrefix = `${camera}, ${lighting}, authentic UGC, no filters, no beauty mode,`;
+
+  // Per-slide realism anchors — prevent FLUX from over-polishing later slides
+  // Slide 0-1: raw and uncomfortable, slide 2-3: still clearly imperfect, slide 4-5: real but healthy
+  const realismAnchors = [
+    'skin looks painful and reactive, clearly distressed, zero retouching, raw documentary',
+    'still visibly irritated, slight discomfort in expression, unretouched, documentary style',
+    'improving but clearly still imperfect, small blemishes still present, zero airbrushing, candid',
+    'noticeably better but still real skin with pores and texture, not a beauty photo, candid phone shot',
+    'calm healthy skin but still showing real pores freckles and fine lines, not perfect, real person',
+    'good skin day for a real person — texture pores and slight unevenness still visible, no filter applied',
+  ];
+  const realismAnchor = realismAnchors[Math.min(slideIndex, 5)];
   let prompt = '';
   if (type === 'selfie') {
-    prompt = `${qualityPrefix} selfie of a young woman, ${scene}, ${skinState}, ${framing}, ${outfit}, arm extended holding phone, no makeup, ${lighting}, real person not a model, slightly imperfect composition, fully clothed`;
+    prompt = `${qualityPrefix} selfie of a young woman, ${archClean}, ${scene}, ${skinState}, ${framing}, ${outfit}, arm extended holding phone, no makeup, real person not a model, slightly imperfect composition, fully clothed, ${realismAnchor}`;
   } else if (type === 'mirror') {
-    prompt = `${qualityPrefix} young woman looking at bathroom mirror, ${scene}, ${skinState}, ${framing}, ${outfit}, morning routine, no makeup, ${lighting}, toothbrush or products on cluttered counter, authentic candid moment, fully clothed`;
+    prompt = `${qualityPrefix} young woman looking at bathroom mirror, ${archClean}, ${scene}, ${skinState}, ${framing}, ${outfit}, morning routine, no makeup, toothbrush or products on cluttered counter, authentic candid moment, fully clothed, ${realismAnchor}`;
   } else if (type === 'lifestyle') {
-    prompt = `${qualityPrefix} candid shot of a young woman, ${scene}, ${skinState}, ${outfit}, ${lighting}, natural everyday moment, slightly candid angle, no makeup, real home environment visible, fully clothed`;
+    prompt = `${qualityPrefix} candid shot of a young woman, ${archClean}, ${scene}, ${skinState}, ${outfit}, natural everyday moment, slightly candid angle, no makeup, real home environment visible, fully clothed, ${realismAnchor}`;
   } else if (type === 'skin_close') {
-    prompt = `extreme macro close-up of a young woman's face, ultra-detailed skin texture, visible pores, fine peach fuzz, natural sebum, ${skinState}, subtle imperfections, ${lighting}, no makeup, raw unedited skin, no filters, photorealistic`;
+    prompt = `${camera}, ${archClean}, extreme macro close-up, ultra-detailed skin texture, visible pores, fine peach fuzz, natural sebum, ${skinState}, subtle imperfections, no makeup, raw unedited skin, no filters, photorealistic, ${realismAnchor}`;
   } else if (type === 'before_after') {
-    prompt = `${qualityPrefix} split image, left side: woman with ${skinState} looking tired and frustrated, right side: same woman with calmer clearer skin looking relieved, same angle, ${lighting}, authentic, no text, fully clothed`;
+    prompt = `${qualityPrefix} ${archClean}, split image, left side: woman with ${skinState} looking tired and frustrated, right side: same woman with calmer clearer skin looking relieved, same angle, ${lighting}, authentic, no text, fully clothed`;
   } else if (type === 'product') {
     prompt = `${qualityPrefix} young woman holding skincare products, ${scene || 'cluttered bathroom counter'}, ${outfit}, ${lighting}, looking at products, slightly imperfect framing, no text, photorealistic, fully clothed`;
   } else if (type === 'app') {
     prompt = `${qualityPrefix} young woman holding iPhone showing a skincare app, ${scene}, app screen visible, ${framing}, ${outfit}, ${lighting}, authentic casual photo, fully clothed`;
   } else {
-    prompt = `${qualityPrefix} ${styleDesc}, ${framing}, ${lighting}, no makeup, authentic real person, fully clothed`;
+    prompt = `${qualityPrefix} ${archClean}, ${styleDesc}, ${framing}, no makeup, authentic real person, fully clothed`;
   }
   return { prompt, negativePrompt: RV_NEGATIVE };
 }
@@ -1492,7 +1544,16 @@ async function generateSlide(i, hook, arch, falKey, acc, charUrl, hasLoRA) {
     // Pass 3 (AuraSR 4x) disabled — causes large file sizes for TikTok upload
 
     // ── Composite text overlay ────────────────────────────────────────────
-    const slideText = planEntry?.text || (i === 0 ? hook : '');
+    // Fallback story captions if Claude plan didn't supply text
+    const storyFallbacks = [
+      hook,
+      'I tried everything for years',
+      'then I found this app',
+      'week 2 — something finally shifted',
+      'week 4 — I can't believe the difference',
+      'this is what my skin looks like now',
+    ];
+    const slideText = planEntry?.text || storyFallbacks[i] || '';
     const finalUrl = await compositeTextOnImage(currentUrl, slideText, i, variant.label);
 
     generatedImages[i] = finalUrl;
@@ -2032,8 +2093,11 @@ async function generateCharacter() {
 
   const skinDetail = skinMap[skinType];
 
-  // FLUX prompt — no SD weighted syntax, clean natural language works best
-  const prompt = `Photorealistic portrait of a ${desc}, ${skinDetail}, visible pores, fine peach fuzz, natural sebum and oily sheen, subtle imperfections, no makeup, natural soft window light, shallow depth of field, looking directly at camera, ultra-detailed skin texture, raw unedited skin, phone camera photo, authentic UGC aesthetic, cinematic realism`;
+  // FLUX prompt — clean natural language, no SD weighted syntax
+  // Strip any weighted syntax from arch desc if present
+  const archDesc = (document.getElementById('arch-desc')?.value || '').replace(/\([^)]+:\d+(\.\d+)?\)/g, '').replace(/\s+/g, ' ').trim();
+  const baseDesc = archDesc || `portrait of a ${desc}, visible pores, fine peach fuzz, natural sebum and oily sheen, subtle imperfections, no makeup, natural soft window light, shallow depth of field, looking directly at camera, ultra-detailed skin texture`;
+  const prompt = `Photorealistic ${baseDesc}, ${desc}, ${skinDetail}, raw unedited skin, phone camera photo, authentic UGC aesthetic, cinematic realism`;
 
   try {
     // Pass 1: Generate character with FLUX Dev (best photorealism on FAL)
@@ -2505,7 +2569,7 @@ async function compositeTextOnImage(imageUrl, text, slideIndex, slideLabel) {
         ctx.fillText(l, xAnchor, startY + li * lineHeight);
       });
 
-      resolve(canvas.toDataURL('image/png'));
+      resolve(canvas.toDataURL('image/jpeg', 0.85)); // JPEG 85% — ~10x smaller than PNG
     };
     img.onerror = () => resolve(imageUrl);
     img.src = imageUrl;
