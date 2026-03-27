@@ -537,7 +537,7 @@
     <button class="nav-item" onclick="nav('schedule')"><span class="icon">🕐</span> Scheduler</button>
 
     <div class="sidebar-section" style="margin-top:8px;">Docs</div>
-    <button class="nav-item" style="font-size:12px;" onclick="openLink('https://platform.openai.com')"><span class="icon">↗</span> OpenAI platform</button>
+    <button class="nav-item" style="font-size:12px;" onclick="openLink('https://fal.ai/dashboard')"><span class="icon">↗</span> FAL dashboard</button>
 
   </aside>
 
@@ -977,46 +977,24 @@ function nav(name) {
 
 // ─── KEYS & STATUS ────────────────────────────────────────────────────────────
 function getFalKey() { const el = document.getElementById('fal-key'); return el ? el.value.trim() : ''; }
-function getOpenAIKey() { return getFalKey(); }
 function getAnthropicKey() { return document.getElementById('anthropic-key').value.trim(); }
 
 // ─── FAL.AI CLIENT ────────────────────────────────────────────────────────────
 // Submit via proxy (avoids CORS on POST), poll from browser (avoids timeout)
 async function callFal(endpoint, input, falKey) {
+  // Single POST to /api/fal — server uses fal.run (synchronous), returns result directly
   const key = falKey || getFalKey();
-
-  // Step 1: Submit job via proxy to get request_id (fast, avoids CORS on POST)
-  const submitRes = await fetch('/api/fal', {
+  const res = await fetch('/api/fal', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-fal-key': key },
     body: JSON.stringify({ endpoint, input }),
   });
-  const submitText = await submitRes.text();
-  let submitData;
-  try { submitData = JSON.parse(submitText); }
-  catch(e) { throw new Error('fal proxy error: ' + submitText.slice(0, 200)); }
-  if (!submitData.request_id) throw new Error('Submit failed: ' + JSON.stringify(submitData));
-
-  const requestId = submitData.request_id;
-
-  // Step 2: Poll directly from browser (no serverless timeout)
-  for (let i = 0; i < 90; i++) {
-    await new Promise(r => setTimeout(r, 2000));
-    const statusRes = await fetch(
-      `https://queue.fal.run/${endpoint}/requests/${requestId}/status`,
-      { headers: { 'Authorization': `Key ${key}` } }
-    );
-    const statusData = await statusRes.json();
-    if (statusData.status === 'COMPLETED') {
-      const resultRes = await fetch(
-        `https://queue.fal.run/${endpoint}/requests/${requestId}`,
-        { headers: { 'Authorization': `Key ${key}` } }
-      );
-      return await resultRes.json();
-    }
-    if (statusData.status === 'FAILED') throw new Error('Generation failed: ' + JSON.stringify(statusData));
-  }
-  throw new Error('Timeout waiting for fal result');
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); }
+  catch(e) { throw new Error('fal proxy error: ' + text.slice(0, 200)); }
+  if (!res.ok) throw new Error(data.error || 'fal failed: ' + res.status);
+  return data;
 }
 
 
@@ -1172,7 +1150,7 @@ function syncGenHook() {
   if (selectedHook) document.getElementById('gen-hook').value = selectedHook;
 }
 
-// ─── GENERATE SLIDESHOW (OpenAI gpt-image-1) ──────────────────────────────────
+// ─── GENERATE SLIDESHOW (FAL Realistic Vision V6) ─────────────────────────────
 function renderSlidePreviewPlaceholders() {
   const row = document.getElementById('slides-preview-row');
   row.innerHTML = '';
@@ -2281,8 +2259,8 @@ function postToSelectedAccounts() {
 
 // ─── BULK GENERATE ────────────────────────────────────────────────────────────
 async function bulkGenerate() {
-  const oaiKey = getOpenAIKey();
-  if (!oaiKey) { showToast('Add your OpenAI API key', 'error'); return; }
+  const falKey2 = getFalKey();
+  if (!falKey2) { showToast('Add your FAL API key', 'error'); return; }
 
   const count = parseInt(document.getElementById('bulk-count').value);
   const hookBank = document.getElementById('bulk-hooks').value.trim().split('\n').filter(h => h.trim());
@@ -2350,15 +2328,20 @@ async function bulkGenerate() {
       const fullPrompt = `${arch} ${styleDesc} Style: photorealistic documentary portrait photography. Negative: ${negativePrompt}`;
 
       try {
-        const res = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${oaiKey}` },
-          body: JSON.stringify({ model: 'gpt-image-1', prompt: fullPrompt, n: 1, size: '1024x1536' })
-        });
-        const data = await res.json();
-        if (data.error) throw new Error(data.error.message);
-        const url = data.data[0].url || `data:image/png;base64,${data.data[0].b64_json}`;
-        images.push({ url, label: variant.label, slideNum: i + 1, isFirst });
+        const falData = await callFal('fal-ai/realistic-vision/v6', {
+          model_name: 'SG161222/Realistic_Vision_V6.0_B1_noVAE',
+          prompt: fullPrompt,
+          negative_prompt: RV_NEGATIVE,
+          image_size: { width: 832, height: 1216 },
+          num_inference_steps: 35,
+          guidance_scale: 5,
+          num_images: 1,
+          enable_safety_checker: false,
+          format: 'png',
+          loras: [],
+        }, getFalKey());
+        if (!falData.images?.[0]?.url) throw new Error(JSON.stringify(falData.error || 'No image'));
+        images.push({ url: falData.images[0].url, label: variant.label, slideNum: i + 1, isFirst });
         bulkLog(`  Slide ${i+1} ✓`, 'ok');
       } catch(e) {
         bulkLog(`  Slide ${i+1} failed: ${e.message}`, 'err');
