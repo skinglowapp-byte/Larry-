@@ -1278,7 +1278,7 @@ function removeLoRA(index) {
 // Pass 2: Crystal Upscaler (face-specific enhancement)
 
 // FLUX negative prompt — keep minimal, FLUX doesn't use weighted negatives like SD
-const RV_NEGATIVE = 'cartoon, anime, illustration, painting, drawing, cgi, 3d render, airbrushed, smooth plastic skin, perfect flawless skin, beauty retouch, watermark, text, logo, blurry, deformed, bad anatomy, extra limbs, symmetrical perfect features, studio flash, ring light';
+const RV_NEGATIVE = 'cartoon, anime, illustration, painting, drawing, cgi, 3d render, airbrushed, smooth plastic skin, perfect flawless skin, beauty retouch, watermark, text, logo, blurry, deformed, bad anatomy, extra limbs, symmetrical perfect features, studio flash, ring light, golden hour, cinematic lighting, professional photography, perfectly lit, staged, stock photo, flattering light, beauty lighting, soft light, model pose, looking directly at camera';
 
 // Pass 1: Generate with FLUX Dev via fal-ai/flux-lora
 // FLUX architecture — far superior skin texture and photorealism vs SD-based models
@@ -1404,7 +1404,7 @@ function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex) {
   } else if (type === 'mirror') {
     prompt = `${qualityPrefix} young woman looking at bathroom mirror, ${archClean}, ${scene}, ${skinState}, ${framing}, ${outfit}, morning routine, no makeup, toothbrush or products on cluttered counter, authentic candid moment, fully clothed, ${realismAnchor}`;
   } else if (type === 'lifestyle') {
-    prompt = `${qualityPrefix} candid shot of a young woman, ${archClean}, ${scene}, ${skinState}, ${outfit}, natural everyday moment, slightly candid angle, no makeup, real home environment visible, fully clothed, ${realismAnchor}`;
+    prompt = `${qualityPrefix} candid shot of a young woman, ${archClean}, ${scene}, ${skinState}, ${outfit}, natural everyday indoor moment, slightly candid angle, slightly awkward pose, harsh unflattering indoor light not golden hour, no makeup, real home environment visible, fully clothed, ${realismAnchor}, not outdoors, no golden hour, no cinematic lighting`;
   } else if (type === 'skin_close') {
     prompt = `${camera}, ${archClean}, extreme macro close-up, ultra-detailed skin texture, visible pores, fine peach fuzz, natural sebum, ${skinState}, subtle imperfections, no makeup, raw unedited skin, no filters, photorealistic, ${realismAnchor}`;
   } else if (type === 'before_after') {
@@ -1412,7 +1412,7 @@ function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex) {
   } else if (type === 'product') {
     prompt = `${qualityPrefix} young woman holding skincare products, ${scene || 'cluttered bathroom counter'}, ${outfit}, ${lighting}, looking at products, slightly imperfect framing, no text, photorealistic, fully clothed`;
   } else if (type === 'app') {
-    prompt = `${qualityPrefix} young woman holding iPhone showing a skincare app, ${scene}, app screen visible, ${framing}, ${outfit}, ${lighting}, authentic casual photo, fully clothed`;
+    prompt = `${qualityPrefix} young woman holding iPhone showing a skincare app, ${archClean}, ${scene}, app screen visible, ${framing}, ${outfit}, slightly awkward hand position, candid unaware expression, harsh unflattering indoor light, no makeup, real person not a model, fully clothed, ${realismAnchor}`;
   } else {
     prompt = `${qualityPrefix} ${archClean}, ${styleDesc}, ${framing}, no makeup, authentic real person, fully clothed`;
   }
