@@ -1282,24 +1282,28 @@ const RV_NEGATIVE = 'cartoon, anime, illustration, painting, drawing, cgi, 3d re
 
 // Pass 1: Generate with FLUX Dev via fal-ai/flux-lora
 // FLUX architecture — far superior skin texture and photorealism vs SD-based models
-function buildRVBody(prompt, charUrl, hasLoRA, loraPath, loraTrigger) {
+function buildRVBody(prompt, charUrl, hasLoRA, loraPath, loraTrigger, slideIndex) {
+  // Realism LoRA scale: higher on early slides (raw/distressed skin needs more texture push),
+  // slightly lower on later slides so LoRA face consistency wins over realism style
+  const realismScale = (slideIndex !== undefined && slideIndex >= 3) ? 0.65 : 0.8;
+
   const input = {
     prompt: hasLoRA && loraTrigger ? `${loraTrigger}, ${prompt}` : prompt,
-    image_size: 'portrait_4_3', // 768x1024 portrait — FLUX native
-    num_inference_steps: 28,
-    guidance_scale: 3.5,
+    image_size: { width: 768, height: 1360 }, // tall portrait — better face consistency than portrait_4_3
+    num_inference_steps: 35, // more steps = better adherence to prompt detail on mid/late slides
+    guidance_scale: 4.5,    // higher CFG = FLUX follows prompt more strictly, less generic face drift
     num_images: 1,
     output_format: 'jpeg',
     enable_safety_checker: false,
-    // FLUX Realism LoRA — key quality driver, dramatically improves skin texture
     loras: [
-      { path: 'https://huggingface.co/XLabs-AI/flux-RealismLora/resolve/main/lora.safetensors', scale: 0.85 }
+      // Realism LoRA — texture and photographic quality
+      { path: 'https://huggingface.co/XLabs-AI/flux-RealismLora/resolve/main/lora.safetensors', scale: realismScale }
     ],
   };
 
-  // If account has trained LoRA, add it for face consistency
+  // Account LoRA — face consistency, scale higher than realism so face wins
   if (hasLoRA && loraPath) {
-    input.loras.push({ path: loraPath, scale: 0.8 });
+    input.loras.push({ path: loraPath, scale: 0.9 });
     if (loraTrigger) input.prompt = `${loraTrigger}, ${input.prompt}`;
   }
 
@@ -1342,12 +1346,12 @@ function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex) {
 
   // UGC camera authenticity — these prompts are what make FLUX output look like real phone footage
   const cameras = [
-    'shot on iPhone 13, slightly grainy sensor, auto-exposure',
-    'shot on Samsung Galaxy, slight lens distortion, auto-HDR',
-    'shot on iPhone, front camera, slight bokeh compression',
-    'shot on phone camera, slightly overexposed highlights, authentic',
-    'candid iPhone photo, slight motion blur, real lighting',
-    'shot on smartphone, natural noise grain, no post-processing',
+    'shot on iPhone 13, slightly grainy sensor, harsh auto-exposure, unedited',
+    'shot on Samsung Galaxy, slight lens distortion, auto-HDR off, raw',
+    'shot on iPhone 12, front camera selfie, slight compression artefacts, unedited',
+    'shot on iPhone, slightly underexposed, no post-processing, phone front camera',
+    'candid shot on iPhone, slightly soft focus, natural unedited colours',
+    'shot on smartphone, natural sensor grain, casual framing, no filters',
   ];
   const camera = cameras[slideIndex % cameras.length];
 
@@ -1511,7 +1515,7 @@ async function generateSlide(i, hook, arch, falKey, acc, charUrl, hasLoRA) {
 
   try {
     const falKey2 = getFalKey();
-    const rvBody = buildRVBody(fullPrompt, isHumanShot ? charUrl : null, hasLoRA, acc?.loraPath, acc?.loraTrigger);
+    const rvBody = buildRVBody(fullPrompt, isHumanShot ? charUrl : null, hasLoRA, acc?.loraPath, acc?.loraTrigger, i);
 
     setLog(`Slide ${i + 1} · Pass 1: Generating...`);
     const rvBodyParsed = JSON.parse(rvBody);
