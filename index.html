@@ -1451,17 +1451,24 @@ Character: ${charDesc}
 STORY STRUCTURE:
 - Slide 1: Hook moment — raw relatable scene, skin problem painfully visible, text = exact hook
 - Slide 2: The struggle — emotional low point, hiding or frustrated, real messy home setting
-- Slide 3: Discovery — finds the app, slightly hopeful but skeptical
-- Slide 4: Early progress — same type of messy setting, skin visibly calmer
-- Slide 5: More progress — different setting, skin clearly improving
-- Slide 6: After — confident natural good skin day, different casual setting
+- Slide 3: Discovery — finds the app on sofa or in bed at night, phone screen glow, slightly hopeful but skeptical
+- Slide 4: Early progress — kitchen or bedroom setting, skin visibly calmer, morning light
+- Slide 5: More progress — bathroom or home desk setting, skin clearly improving, indoor light
+- Slide 6: After — indoor casual setting like living room or kitchen, natural window light, confident real person not model
+
+SCENE RULES (critical):
+- ALL scenes must be INDOORS — bedroom, bathroom, kitchen, sofa, office, car only
+- NO golden hour, NO outdoor parks, NO coffee shops, NO cinematic lighting
+- Every scene must have harsh or unflattering real lighting — bathroom overhead, phone screen glow, window sidelight, dim lamp
+- Scenes must feel like a real person's home, not a photoshoot location
+- Slide 6 must be indoor — e.g. bathroom mirror, bedroom window, kitchen morning light
 
 SCENE TYPES: selfie, mirror, lifestyle, skin_close, app, product
 Each slide needs SHORT story text (3-8 words max) continuing the narrative.
 Slide 1 text must be EXACTLY: "${hook}"
 
 Return ONLY a JSON array of exactly 6 objects:
-[{"slide":1,"type":"selfie","scene":"messy real location with outfit and lighting details","skin_state":"skin condition at this stage","text":"story text 3-8 words"},...]`;
+[{"slide":1,"type":"selfie","scene":"messy real indoor location with outfit and harsh lighting details","skin_state":"skin condition at this stage","text":"story text 3-8 words"},...]`;
 
     const planRes = await fetch('/api/claude', {
       method: 'POST',
@@ -2415,30 +2422,70 @@ async function bulkGenerate() {
     bulkLog(`Slideshow ${s+1}/${count}: "${hook.slice(0,40)}..."`, 'info');
     setBulkProgress((s / count) * 100, `Generating slideshow ${s+1} of ${count}...`);
 
+    // Use same Claude planning as single generator
+    let bulkPlan = [];
+    try {
+      const appName = document.getElementById('app-name')?.value || 'Aureya';
+      const acc2 = selectedAccountIndex !== null ? connectedAccounts[selectedAccountIndex] : null;
+      const charDesc = acc2?.desc || 'woman in her late 20s with sensitive skin';
+      const planRes = await fetch('/api/claude', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-anthropic-key': getAnthropicKey() },
+        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1500, messages: [{ role: 'user', content: `Plan a 6-slide TikTok skincare story slideshow.
+
+Hook: "${hook}"
+App: ${appName} — AI skincare for sensitive/eczema/rosacea skin
+Character: ${charDesc}
+
+STORY STRUCTURE:
+- Slide 1: Hook moment — raw relatable scene, skin problem painfully visible, text = exact hook
+- Slide 2: The struggle — emotional low point, hiding or frustrated, real messy home setting
+- Slide 3: Discovery — finds the app on sofa or in bed at night, phone screen glow, slightly hopeful but skeptical
+- Slide 4: Early progress — kitchen or bedroom setting, skin visibly calmer, morning light
+- Slide 5: More progress — bathroom or home desk setting, skin clearly improving, indoor light
+- Slide 6: After — indoor casual setting like living room or kitchen, natural window light, confident real person not model
+
+SCENE RULES (critical):
+- ALL scenes must be INDOORS — bedroom, bathroom, kitchen, sofa, office, car only
+- NO golden hour, NO outdoor parks, NO coffee shops, NO cinematic lighting
+- Every scene must have harsh or unflattering real lighting — bathroom overhead, phone screen glow, window sidelight, dim lamp
+- Scenes must feel like a real person's home, not a photoshoot location
+- Slide 6 must be indoor — e.g. bathroom mirror, bedroom window, kitchen morning light
+
+SCENE TYPES: selfie, mirror, lifestyle, skin_close, app, product
+Each slide needs SHORT story text (3-8 words max) continuing the narrative.
+Slide 1 text must be EXACTLY: "${hook}"
+
+Return ONLY a JSON array of exactly 6 objects:
+[{"slide":1,"type":"selfie","scene":"messy real indoor location with outfit and harsh lighting details","skin_state":"skin condition at this stage","text":"story text 3-8 words"},...]` }] })
+      });
+      const planData = await planRes.json();
+      bulkPlan = JSON.parse((planData.content?.[0]?.text || '[]').replace(/\`\`\`json|\`\`\`/g,'').trim());
+    } catch(e) {
+      bulkLog('  Plan failed, using fallback scenes', 'err');
+    }
+
+    const acc = selectedAccountIndex !== null ? connectedAccounts[selectedAccountIndex] : null;
+    const hasLoRA = !!(acc?.loraPath);
+
     const images = [];
     for (let i = 0; i < 6; i++) {
       const variant = styleVariants[i];
       const isFirst = i === 0;
       const beforeExtras = document.getElementById('before-extras').value.trim();
       const styleDesc = isFirst ? variant.style + (beforeExtras ? ` Including: ${beforeExtras}.` : '') : variant.style;
-      const negativePrompt = 'smooth plastic skin, airbrushed, perfect flawless skin, cartoon, anime, illustration, painting, drawing, lowres, blurry, deformed, bad anatomy, extra limbs, watermark, text, logo, signature, overexposed, underexposed, makeup, heavy eyeliner, lipstick, filters, instagram style, beauty retouch, doll-like, CGI, 3d render, plastic, shiny plastic, studio flash, ring light, beauty dish, symmetrical perfect features';
-      const fullPrompt = `${arch} ${styleDesc} Style: photorealistic documentary portrait photography. Negative: ${negativePrompt}`;
+      const planEntry = bulkPlan[i] || null;
+      const { prompt: slidePrompt } = buildSlidePrompt(planEntry, styleDesc, arch, hook, i);
+      const rvBodyStr = buildRVBody(slidePrompt, null, hasLoRA, acc?.loraPath, acc?.loraTrigger, i);
+      const rvBody = JSON.parse(rvBodyStr);
 
       try {
-        const falData = await callFal('fal-ai/flux-lora', {
-          prompt: fullPrompt,
-          image_size: 'portrait_4_3',
-          num_inference_steps: 28,
-          guidance_scale: 3.5,
-          num_images: 1,
-          output_format: 'jpeg',
-          enable_safety_checker: false,
-          loras: [
-            { path: 'https://huggingface.co/XLabs-AI/flux-RealismLora/resolve/main/lora.safetensors', scale: 0.85 }
-          ],
-        }, getFalKey());
+        const falData = await callFal(rvBody.endpoint, rvBody.input, getFalKey());
         if (!falData.images?.[0]?.url) throw new Error(JSON.stringify(falData.error || 'No image'));
-        images.push({ url: falData.images[0].url, label: variant.label, slideNum: i + 1, isFirst });
+        // Apply text overlay same as single generator
+        const textOverlay = planEntry?.text || (i === 0 ? hook : '');
+        const finalUrl = textOverlay ? await compositeTextOnImage(falData.images[0].url, textOverlay, i, variant.label) : falData.images[0].url;
+        images.push({ url: finalUrl, label: variant.label, slideNum: i + 1, isFirst });
         bulkLog(`  Slide ${i+1} ✓`, 'ok');
       } catch(e) {
         bulkLog(`  Slide ${i+1} failed: ${e.message}`, 'err');
