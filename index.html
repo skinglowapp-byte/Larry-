@@ -523,26 +523,9 @@
     Larry
     <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);font-style:normal;margin-left:4px;">/ TikTok Slideshow</span>
   </div>
-
 </header>
 
-<div class="layout">
-  <aside>
-    <div class="sidebar-section">Workflow</div>
-    <button class="nav-item active" onclick="nav('setup')"><span class="icon">⚙</span> Setup</button>
-    <button class="nav-item" onclick="nav('hooks')"><span class="icon">🎣</span> Hook Generator</button>
-    <button class="nav-item" onclick="nav('generate')"><span class="icon">✦</span> Generate Slideshow</button>
-    <button class="nav-item" onclick="nav('accounts')"><span class="icon">👤</span> Accounts</button>
-    <button class="nav-item" onclick="nav('performance')"><span class="icon">📈</span> Performance Log</button>
-    <button class="nav-item" onclick="nav('schedule')"><span class="icon">🕐</span> Scheduler</button>
-
-    <div class="sidebar-section" style="margin-top:8px;">Docs</div>
-    <button class="nav-item" style="font-size:12px;" onclick="openLink('https://platform.openai.com')"><span class="icon">↗</span> OpenAI platform</button>
-
-  </aside>
-
-  <main>
-  <div style="position:sticky;top:0;z-index:50;background:#0e0e0e;padding:12px 0 10px;margin-bottom:10px;">
+<div style="position:sticky;top:0;z-index:50;background:#0e0e0e;padding:12px 32px 10px;">
   <div style="background:#161616;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px 18px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
     <div style="flex:1;min-width:180px;">
       <div style="font-family:DM Mono,monospace;font-size:10px;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">FAL API Key (images)</div>
@@ -562,7 +545,24 @@
       Connect TikTok
     </a>
   </div>
-  </div>
+</div>
+
+<div class="layout">
+  <aside>
+    <div class="sidebar-section">Workflow</div>
+    <button class="nav-item active" onclick="nav('setup')"><span class="icon">⚙</span> Setup</button>
+    <button class="nav-item" onclick="nav('hooks')"><span class="icon">🎣</span> Hook Generator</button>
+    <button class="nav-item" onclick="nav('generate')"><span class="icon">✦</span> Generate Slideshow</button>
+    <button class="nav-item" onclick="nav('accounts')"><span class="icon">👤</span> Accounts</button>
+    <button class="nav-item" onclick="nav('performance')"><span class="icon">📈</span> Performance Log</button>
+    <button class="nav-item" onclick="nav('schedule')"><span class="icon">🕐</span> Scheduler</button>
+
+    <div class="sidebar-section" style="margin-top:8px;">Docs</div>
+    <button class="nav-item" style="font-size:12px;" onclick="openLink('https://platform.openai.com')"><span class="icon">↗</span> OpenAI platform</button>
+
+  </aside>
+
+  <main>
 
     <!-- SETUP PANE -->
     <div class="pane active" id="pane-setup">
@@ -734,6 +734,7 @@
           <button class="btn btn-ghost" onclick="generateCaption()">Regenerate</button>
         </div>
       </div>
+
 
       <!-- VOICEOVER CARD -->
       <div class="card" id="voiceover-card" style="display:none;">
@@ -975,9 +976,9 @@ function nav(name) {
   document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('pane-' + name).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => {
-    if (n.getAttribute('onclick') === `nav('${name}')`) n.classList.add('active');
-  });
+  const navItems = document.querySelectorAll('.nav-item');
+  const map = { setup: 0, hooks: 1, generate: 2, accounts: 3, performance: 4, schedule: 5 };
+  const idx = map[name]; if (idx !== undefined && idx >= 0 && navItems[idx]) navItems[idx].classList.add('active');
   if (name === 'hooks') syncHookContext();
   if (name === 'generate') { syncGenHook(); renderSlidePreviewPlaceholders(); renderAccountSelector(); }
   if (name === 'performance') renderPerfTable();
@@ -1046,7 +1047,6 @@ function loadSavedKeys() {
   const ch = localStorage.getItem('larry_ch');
   const ant = localStorage.getItem('larry_ant');
   const falEl = document.getElementById('fal-key'); if (falEl && oai) { falEl.value = oai; }
-  const elevenEl = document.getElementById('eleven-key'); const elevenSaved = localStorage.getItem('larry_eleven'); if (elevenEl && elevenSaved) { elevenEl.value = elevenSaved; }
   if (ant) document.getElementById('anthropic-key').value = ant;
   updateStatus();
 }
@@ -1176,7 +1176,7 @@ function syncGenHook() {
   if (selectedHook) document.getElementById('gen-hook').value = selectedHook;
 }
 
-// ─── GENERATE SLIDESHOW (Realistic Vision V6 via fal.ai) ───────────────────────
+// ─── GENERATE SLIDESHOW (OpenAI gpt-image-1) ──────────────────────────────────
 function renderSlidePreviewPlaceholders() {
   const row = document.getElementById('slides-preview-row');
   row.innerHTML = '';
@@ -2357,20 +2357,15 @@ async function bulkGenerate() {
       const fullPrompt = `${arch} ${styleDesc} Style: photorealistic documentary portrait photography. Negative: ${negativePrompt}`;
 
       try {
-        const falData = await callFal('fal-ai/realistic-vision/v6', {
-          model_name: 'SG161222/Realistic_Vision_V6.0_B1_noVAE',
-          prompt: fullPrompt,
-          negative_prompt: RV_NEGATIVE,
-          image_size: { width: 832, height: 1216 },
-          num_inference_steps: 35,
-          guidance_scale: 5,
-          num_images: 1,
-          enable_safety_checker: false,
-          format: 'png',
-          loras: [],
-        }, getFalKey());
-        if (!falData.images?.[0]?.url) throw new Error(JSON.stringify(falData.error || 'No image returned'));
-        images.push({ url: falData.images[0].url, label: variant.label, slideNum: i + 1, isFirst });
+        const res = await fetch('https://api.openai.com/v1/images/generations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${oaiKey}` },
+          body: JSON.stringify({ model: 'gpt-image-1', prompt: fullPrompt, n: 1, size: '1024x1536' })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+        const url = data.data[0].url || `data:image/png;base64,${data.data[0].b64_json}`;
+        images.push({ url, label: variant.label, slideNum: i + 1, isFirst });
         bulkLog(`  Slide ${i+1} ✓`, 'ok');
       } catch(e) {
         bulkLog(`  Slide ${i+1} failed: ${e.message}`, 'err');
@@ -2505,7 +2500,7 @@ async function compositeTextOnImage(imageUrl, text, slideIndex, slideLabel) {
         ctx.fillText(l, xAnchor, startY + li * lineHeight);
       });
 
-      resolve(canvas.toDataURL('image/jpeg', 0.85)); // JPEG 85% — ~10x smaller than PNG
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
     };
     img.onerror = () => resolve(imageUrl);
     img.src = imageUrl;
@@ -2521,33 +2516,71 @@ function showToast(msg, type = '') {
   setTimeout(() => t.className = 'toast', 3000);
 }
 
+
+// ─── ELEVENLABS ───────────────────────────────────────────────────────────────
+function saveElevenKey() {
+  const key = document.getElementById('eleven-key')?.value?.trim();
+  if (key) localStorage.setItem('larry_eleven', key);
+}
+
+function getElevenKey() {
+  return document.getElementById('eleven-key')?.value?.trim() || localStorage.getItem('larry_eleven') || '';
+}
+
+async function loadElevenVoices() {
+  const key = getElevenKey();
+  if (!key) { showToast('Add ElevenLabs key first', 'error'); return; }
+  try {
+    const res = await fetch('/api/elevenlabs', { headers: { 'x-eleven-key': key } });
+    const data = await res.json();
+    const sel = document.getElementById('eleven-voice-select');
+    if (!sel) return;
+    const voices = data.voices || [];
+    sel.innerHTML = voices.map(v => `<option value="${v.voice_id}">${v.name}</option>`).join('');
+    if (voices.length) showToast(`${voices.length} voices loaded`, 'success');
+  } catch(e) { showToast('Voices error: ' + e.message, 'error'); }
+}
+
+function useCaptionAsScript() {
+  const caption = document.getElementById('caption-output')?.innerText || '';
+  const script = document.getElementById('voiceover-script');
+  if (script) script.value = caption.replace(/#\w+/g, '').trim();
+}
+
+async function generateVoiceover() {
+  const key = getElevenKey();
+  if (!key) { showToast('Add ElevenLabs key in header', 'error'); return; }
+  const voiceId = document.getElementById('eleven-voice-select')?.value;
+  if (!voiceId) { showToast('Select a voice first', 'error'); return; }
+  const text = document.getElementById('voiceover-script')?.value?.trim();
+  if (!text) { showToast('Enter a script first', 'error'); return; }
+  const btn = document.getElementById('voiceover-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generating...'; }
+  try {
+    const res = await fetch('/api/elevenlabs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-eleven-key': key },
+      body: JSON.stringify({ voice_id: voiceId, text })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(JSON.stringify(data.error));
+    const audioSrc = `data:audio/mpeg;base64,${data.audio_base64}`;
+    const audio = document.getElementById('voiceover-audio');
+    const dl = document.getElementById('voiceover-download');
+    if (audio) audio.src = audioSrc;
+    if (dl) dl.href = audioSrc;
+    document.getElementById('voiceover-result').style.display = 'block';
+    showToast('Voiceover ready!', 'success');
+  } catch(e) { showToast('Voiceover error: ' + e.message, 'error'); }
+  if (btn) { btn.disabled = false; btn.textContent = '🎙 Generate voiceover'; }
+}
+
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 loadSavedKeys();
 renderPerfTable();
 renderAccounts();
 renderAccountSelector();
 handleTikTokCallback();
-// Restore generated images from sessionStorage if available
-try {
-  const saved = sessionStorage.getItem('larry_images');
-  if (saved) {
-    const parsed = JSON.parse(saved);
-    if (Array.isArray(parsed) && parsed.some(Boolean)) {
-      generatedImages = parsed;
-      // Show restored slides in preview
-      renderSlidePreviewPlaceholders();
-      const row = document.getElementById('slides-preview-row');
-      parsed.forEach((url, i) => {
-        const cell = document.getElementById('slide-cell-' + i);
-        if (cell && url) {
-          cell.innerHTML = '<div class="slide-n">' + (i+1) + '</div><img src="' + url + '" style="width:100%;height:100%;object-fit:cover;" /><div class="style-tag">restored</div>';
-        }
-      });
-      document.getElementById('caption-btn').disabled = false;
-      console.log('[larry] restored', parsed.filter(Boolean).length, 'images from session');
-    }
-  }
-} catch(e) { /* ignore */ }
 
 function handleTikTokCallback() {
   const params = new URLSearchParams(window.location.search);
@@ -2585,7 +2618,7 @@ function handleTikTokCallback() {
       // Check if already connected by openId
       const existing = connectedAccounts.findIndex(a => a.openId === openId);
       if (existing >= 0) {
-        connectedAccounts[existing] = { label, desc, skinType, characterUrl, token, openId, refreshToken, expiresAt };
+        connectedAccounts[existing] = { label, desc, skinType, characterUrl, token, openId };
         showToast('Account updated: ' + label, 'success');
       } else {
         connectedAccounts.push({ label, desc, skinType, characterUrl, token, openId, refreshToken, expiresAt });
