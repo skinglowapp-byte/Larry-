@@ -1675,7 +1675,7 @@ async function postDirectToTikTok(mode) {
   try {
     const res = await fetch('/api/tiktok-auth', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-fal-key': getFalKey() },
       body: JSON.stringify({ access_token: acc.token, open_id: acc.openId, images: valid, caption, posting_mode: isLive ? 'live' : 'inbox' }),
     });
     const data = await res.json();
