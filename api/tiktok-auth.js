@@ -118,32 +118,65 @@ export default async function handler(req, res) {
     const cleanTitle = (titleLine.replace(/#\w+/g, '').replace(/[^a-zA-Z0-9 .,!?'\-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90)) || 'My skincare journey';
 
     try {
-      // Convert base64 images to buffers
-      const imageBuffers = images.map(img => {
-        const base64 = img.replace(/^data:image\/\w+;base64,/, '');
-        return Buffer.from(base64, 'base64');
-      });
+      // TikTok photo API only supports PULL_FROM_URL — not FILE_UPLOAD
+      // We need to upload our base64 images to FAL storage to get public URLs
+      const falKey = req.headers['x-fal-key'] || process.env.FAL_KEY;
+      
+      const photoUrls = [];
+      for (let i = 0; i < images.length; i++) {
+        const base64 = images[i].replace(/^data:image\/\w+;base64,/, '');
+        const buffer = Buffer.from(base64, 'base64');
+        
+        // Upload to FAL storage to get a public URL
+        const falUpload = await fetch('https://rest.alpha.fal.ai/storage/upload/initiate', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Key ${falKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ content_type: 'image/jpeg', file_name: `slide_${i}.jpg` })
+        });
+        const falData = await falUpload.json();
+        
+        if (!falData.upload_url) {
+          return res.status(500).json({ error: `FAL storage initiate failed for image ${i}`, detail: falData });
+        }
+        
+        // Upload the image bytes to FAL
+        const putRes = await fetch(falData.upload_url, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'image/jpeg' },
+          body: buffer
+        });
+        
+        if (!putRes.ok) {
+          return res.status(500).json({ error: `FAL upload failed for image ${i}: ${putRes.status}` });
+        }
+        
+        photoUrls.push(falData.file_url);
+        console.log(`[TikTok] uploaded slide ${i + 1} to FAL:`, falData.file_url);
+      }
 
-      // Step 1: Init the post
+      // Step 1: Init the post using PULL_FROM_URL (only supported method for photos)
       const initPayload = {
         media_type: 'PHOTO',
-        post_mode: isLive ? 'DIRECT_POST' : 'INBOX',
+        post_mode: isLive ? 'DIRECT_POST' : 'MEDIA_UPLOAD',
         post_info: {
           title: cleanTitle,
-          privacy_level: isLive ? 'PUBLIC_TO_EVERYONE' : 'SELF_ONLY',
-          disable_duet: false,
-          disable_comment: false,
-          disable_stitch: false,
-          auto_add_music: true
+          ...(isLive ? {
+            privacy_level: 'PUBLIC_TO_EVERYONE',
+            disable_comment: false,
+            auto_add_music: true
+          } : {})
         },
         source_info: {
-          source: 'FILE_UPLOAD',
+          source: 'PULL_FROM_URL',
           photo_cover_index: 0,
-          photo_count: imageBuffers.length
+          photo_images: photoUrls
         }
       };
 
-      console.log('[TikTok] mode:', posting_mode, '| title:', cleanTitle, '| images:', imageBuffers.length);
+      console.log('[TikTok] mode:', posting_mode, '| title:', cleanTitle, '| images:', photoUrls.length);
 
       const initRes = await fetch('https://open.tiktokapis.com/v2/post/publish/content/init/', {
         method: 'POST',
@@ -162,26 +195,6 @@ export default async function handler(req, res) {
       }
 
       const publishId = initData.data?.publish_id;
-      const uploadUrls = initData.data?.upload_urls;
-
-      if (!uploadUrls || uploadUrls.length === 0) {
-        return res.status(400).json({ error: 'No upload URLs returned', detail: initData });
-      }
-
-      // Step 2: Upload each image buffer to TikTok's upload URLs
-      for (let i = 0; i < uploadUrls.length; i++) {
-        const uploadRes = await fetch(uploadUrls[i], {
-          method: 'PUT',
-          headers: { 'Content-Type': 'image/jpeg' },
-          body: imageBuffers[i]
-        });
-        console.log(`[TikTok] upload ${i + 1}/${uploadUrls.length} status:`, uploadRes.status);
-        if (!uploadRes.ok) {
-          const errText = await uploadRes.text();
-          return res.status(500).json({ error: `Image upload ${i + 1} failed: ${errText}` });
-        }
-      }
-
       return res.status(200).json({ publish_id: publishId, ok: true });
 
     } catch (e) {
