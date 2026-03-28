@@ -1279,7 +1279,7 @@ function removeLoRA(index) {
 // Pass 2: Crystal Upscaler (face-specific enhancement)
 
 // FLUX negative prompt — keep minimal, FLUX doesn't use weighted negatives like SD
-const RV_NEGATIVE = 'cartoon, anime, illustration, painting, drawing, cgi, 3d render, airbrushed, smooth plastic skin, perfect flawless skin, beauty retouch, watermark, text, logo, blurry, deformed, bad anatomy, extra limbs, symmetrical perfect features, studio flash, ring light, golden hour, cinematic lighting, professional photography, perfectly lit, staged, stock photo, flattering light, beauty lighting, soft light, model pose, looking directly at camera';
+const RV_NEGATIVE = 'cartoon, anime, illustration, painting, drawing, cgi, 3d render, airbrushed, smooth plastic skin, perfect flawless skin, perfect symmetrical face, beauty retouch, watermark, text, logo, blurry, deformed, bad anatomy, extra limbs, studio flash, ring light, rim light, key light, fill light, beauty dish, softbox, golden hour, cinematic lighting, dramatic lighting, professional photography, perfectly lit, staged, stock photo, flattering light, beauty lighting, soft light, model pose, model face, looking directly at camera, glossy skin, porcelain skin, perfect complexion, magazine photo, fashion photo, high fashion, editorial, perfect composition, centred portrait, symmetrical composition, hyperrealistic rendering, too detailed, overprocessed, HDR, oversaturated, digital art';
 
 // Pass 1: Generate with FLUX Dev via fal-ai/flux-lora
 // FLUX architecture — far superior skin texture and photorealism vs SD-based models
@@ -1341,84 +1341,100 @@ function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex) {
   const scene = planEntry?.scene || '';
   const skinState = planEntry?.skin_state || styleDesc;
 
-  // Strip any SD weighted syntax from arch (e.g. "(best quality:1.4)") — FLUX ignores it
-  // Keep all the descriptive content — it's valid natural language for FLUX
   const archClean = (arch || '').replace(/\([^)]+:\d+(\.\d+)?\)/g, '').replace(/\s+/g, ' ').trim();
 
-  // UGC camera authenticity — these prompts are what make FLUX output look like real phone footage
+  // Camera variety — all emphasise phone imperfection over studio quality
   const cameras = [
-    'shot on iPhone 13, slightly grainy sensor, harsh auto-exposure, unedited',
-    'shot on Samsung Galaxy, slight lens distortion, auto-HDR off, raw',
-    'shot on iPhone 12, front camera selfie, slight compression artefacts, unedited',
-    'shot on iPhone, slightly underexposed, no post-processing, phone front camera',
-    'candid shot on iPhone, slightly soft focus, natural unedited colours',
-    'shot on smartphone, natural sensor grain, casual framing, no filters',
+    'shot on iPhone 13 front camera, slightly grainy sensor, harsh auto-exposure, slight barrel distortion, unedited JPEG',
+    'shot on Samsung Galaxy front camera, slight lens distortion, auto-HDR off, raw, slightly washed out',
+    'shot on iPhone 12 front camera, slight compression artefacts, unedited, phone selfie quality',
+    'shot on iPhone, slightly underexposed, motion soft, no post-processing, phone front camera',
+    'candid shot on smartphone, slightly soft focus, camera shake blur, natural unedited colours',
+    'shot on smartphone front cam, natural sensor grain, casual framing, no filters, slightly overexposed',
   ];
   const camera = cameras[slideIndex % cameras.length];
 
+  // Lighting — all unflattering, none cinematic
   const lightings = [
-    'harsh overhead bathroom LED, slight overexposure on forehead',
-    'dim bedroom lamp, underexposed shadows, warm yellow cast',
-    'bright window sidelight, natural soft shadows across face',
-    'mixed indoor lighting, slight green cast from overhead light',
-    'natural daylight from window, flat even light',
-    'car sun visor mirror, washed-out daylight, slightly squinting',
+    'harsh overhead bathroom LED, unflattering shadows under eyes, slight overexposure on forehead and nose',
+    'dim bedroom lamp only, underexposed, muddy shadows, warm yellow cast, not a photoshoot',
+    'bright window sidelight from left, natural soft shadows, no fill light, slightly washed cheek',
+    'mixed indoor overhead light, slight green or yellow cast, flat unflattering, not studio lit',
+    'natural daylight through window, no artificial light, flat even exposure, no rim light',
+    'car visor mirror or dashboard, washed-out midday daylight, squinting slightly, harsh sun angle',
   ];
   const lighting = lightings[slideIndex % lightings.length];
 
+  // Framing — all slightly off, none perfectly composed
   const framings = [
-    'close-up face and shoulders, slightly off-centre framing',
-    'waist-up selfie, arm extended holding phone, slight angle',
-    'three-quarter shot, cluttered background slightly out of focus',
-    'tight face close-up, slightly shaky hand-held',
-    'medium shot, person slightly to one side of frame',
-    'shoulder-up, casual head tilt, relaxed expression',
+    'face and shoulders slightly off-centre, cut off at top slightly, hand visible holding phone',
+    'waist-up selfie, arm extended at awkward angle, head slightly tilted, not posed',
+    'three-quarter shot, background clutter slightly out of focus but visible',
+    'tight face close-up, slightly shaky, forehead slightly cropped',
+    'medium shot, subject slightly to one side, negative space on the other',
+    'shoulder-up, casual head tilt, eyes not perfectly centred in frame',
   ];
   const framing = framings[slideIndex % framings.length];
 
+  // Outfits — all casual, no styling
   const outfits = [
-    'wearing an oversized hoodie, no styling',
-    'wearing a baggy t-shirt, hair messy or in a bun',
-    'wearing a pyjama top or casual tank top',
-    'wearing a plain sweatshirt, no jewellery',
-    'wearing a basic tee, hair down natural',
-    'wearing an old comfy jumper, no makeup',
+    'oversized hoodie, no styling, hair messy',
+    'baggy t-shirt or old top, hair in a loose bun or down flat',
+    'pyjama top or casual tank, no bra strap showing, fully covered',
+    'plain sweatshirt, no jewellery, no styling',
+    'basic worn t-shirt, hair down and natural, no accessories',
+    'old comfy jumper or fleece, hair tied up loosely',
   ];
   const outfit = outfits[slideIndex % outfits.length];
 
-  const qualityPrefix = `${camera}, ${lighting}, authentic UGC, no filters, no beauty mode,`;
+  // Environments — force clutter and real spaces into every shot
+  const environments = [
+    'cluttered bathroom counter with skincare products and a toothbrush visible, slightly steamy mirror',
+    'messy bedroom background, unmade bed or clothes on chair slightly visible',
+    'real kitchen background, dishes or mugs on counter, ordinary UK flat interior',
+    'living room sofa or floor, cushions and everyday objects in background',
+    'bathroom or bedroom, window light, real home not a set',
+    'car interior or home hallway, ordinary real environment',
+  ];
+  const environment = environments[slideIndex % environments.length];
 
-  // Per-slide realism anchors — prevent FLUX from over-polishing later slides
-  // Slide 0-1: raw and uncomfortable, slide 2-3: still clearly imperfect, slide 4-5: real but healthy
+  const qualityPrefix = `${camera}, ${lighting}, authentic UGC content, no filters, no beauty mode, no airbrushing,`;
+
+  // Per-slide realism anchors — stronger language to prevent AI polish creeping in
   const realismAnchors = [
-    'skin looks painful and reactive, clearly distressed, zero retouching, raw documentary',
-    'still visibly irritated, slight discomfort in expression, unretouched, documentary style',
-    'improving but clearly still imperfect, small blemishes still present, zero airbrushing, candid',
-    'noticeably better but still real skin with pores and texture, not a beauty photo, candid phone shot',
-    'calm healthy skin but still showing real pores freckles and fine lines, not perfect, real person',
-    'good skin day for a real person — texture pores and slight unevenness still visible, no filter applied',
+    'skin looks painful and reactive, distressed real person, zero retouching, raw unedited documentary photo, NOT a photoshoot',
+    'still visibly irritated, slight discomfort in expression, unretouched, real everyday person not a model',
+    'improving but clearly still imperfect, small blemishes present, zero airbrushing, candid unposed phone photo',
+    'noticeably better but real skin with open pores and texture, not beauty photography, casual phone selfie',
+    'calm healthy skin still showing real pores freckles and fine lines, not perfect, real person on a normal day',
+    'good skin day for a real person — texture pores and slight unevenness visible, no filter, not a model not staged',
   ];
   const realismAnchor = realismAnchors[Math.min(slideIndex, 5)];
+
+  // Shared negative additions passed back — caller merges with RV_NEGATIVE
   let prompt = '';
+
   if (type === 'selfie') {
-    prompt = `${qualityPrefix} selfie of a young woman, ${archClean}, ${scene}, ${skinState}, ${framing}, ${outfit}, arm extended holding phone, no makeup, real person not a model, slightly imperfect composition, fully clothed, ${realismAnchor}`;
+    prompt = `${qualityPrefix} selfie of a young woman, ${archClean}, ${scene}, ${skinState}, ${framing}, ${outfit}, ${environment}, arm extended holding phone, no makeup, real person not a model, slightly imperfect composition, fully clothed, ${realismAnchor}`;
   } else if (type === 'mirror') {
-    prompt = `${qualityPrefix} young woman looking at bathroom mirror, ${archClean}, ${scene}, ${skinState}, ${framing}, ${outfit}, morning routine, no makeup, toothbrush or products on cluttered counter, authentic candid moment, fully clothed, ${realismAnchor}`;
+    prompt = `${qualityPrefix} young woman looking at bathroom mirror, ${archClean}, ${scene}, ${skinState}, ${framing}, ${outfit}, morning routine, no makeup, ${environment}, authentic candid moment, fully clothed, ${realismAnchor}`;
   } else if (type === 'lifestyle') {
-    prompt = `${qualityPrefix} candid shot of a young woman, ${archClean}, ${scene}, ${skinState}, ${outfit}, natural everyday indoor moment, slightly candid angle, slightly awkward pose, harsh unflattering indoor light not golden hour, no makeup, real home environment visible, fully clothed, ${realismAnchor}, not outdoors, no golden hour, no cinematic lighting`;
+    prompt = `${qualityPrefix} candid photo of a young woman, ${archClean}, ${scene}, ${skinState}, ${outfit}, ${environment}, natural everyday indoor moment, slightly awkward unposed position, harsh unflattering indoor light, no makeup, real home environment, fully clothed, ${realismAnchor}, not outdoors, no golden hour, no cinematic lighting, not a photoshoot`;
   } else if (type === 'skin_close') {
-    prompt = `${camera}, ${archClean}, extreme macro close-up, ultra-detailed skin texture, visible pores, fine peach fuzz, natural sebum, ${skinState}, subtle imperfections, no makeup, raw unedited skin, no filters, photorealistic, ${realismAnchor}`;
+    prompt = `${camera}, ${archClean}, extreme macro close-up face, ultra-detailed skin texture, visible open pores, fine peach fuzz, natural sebum and oiliness, ${skinState}, redness or unevenness, subtle blemishes, no makeup, raw unedited skin, no filters, no retouching, real person skin not CGI, ${realismAnchor}`;
   } else if (type === 'before_after') {
-    prompt = `${qualityPrefix} ${archClean}, split image, left side: woman with ${skinState} looking tired and frustrated, right side: same woman with calmer clearer skin looking relieved, same angle, ${lighting}, authentic, no text, fully clothed`;
+    prompt = `${qualityPrefix} ${archClean}, split image, left side: woman with ${skinState} looking tired and frustrated, right side: same woman with calmer clearer skin, same camera angle and lighting, ${environment}, authentic, no text overlays, fully clothed`;
   } else if (type === 'product') {
-    prompt = `${qualityPrefix} young woman holding skincare products, ${scene || 'cluttered bathroom counter'}, ${outfit}, ${lighting}, looking at products, slightly imperfect framing, no text, photorealistic, fully clothed`;
+    prompt = `${qualityPrefix} young woman holding skincare products, ${scene || 'cluttered bathroom counter with products'}, ${outfit}, ${lighting}, looking at products with uncertain or curious expression, slightly imperfect framing, no text, real home not a studio, fully clothed, ${realismAnchor}`;
   } else if (type === 'app') {
-    prompt = `${qualityPrefix} young woman holding iPhone showing a skincare app, ${archClean}, ${scene}, app screen visible, ${framing}, ${outfit}, slightly awkward hand position, candid unaware expression, harsh unflattering indoor light, no makeup, real person not a model, fully clothed, ${realismAnchor}`;
+    prompt = `${qualityPrefix} young woman holding iPhone showing a skincare app screen, ${archClean}, ${scene}, ${framing}, ${outfit}, ${environment}, app screen slightly reflective, awkward hand position holding phone up, candid unaware expression, harsh unflattering indoor light, no makeup, fully clothed, ${realismAnchor}`;
   } else {
-    prompt = `${qualityPrefix} ${archClean}, ${styleDesc}, ${framing}, no makeup, authentic real person, fully clothed`;
+    prompt = `${qualityPrefix} ${archClean}, ${styleDesc}, ${framing}, ${environment}, no makeup, authentic real person not a model, fully clothed, ${realismAnchor}`;
   }
+
   return { prompt, negativePrompt: RV_NEGATIVE };
 }
+
 
 
 async function generateSlideshow() {
