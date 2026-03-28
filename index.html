@@ -1847,6 +1847,9 @@ async function addToQueue() {
                    || (Date.now() + 5 * 60 * 1000);
   }
 
+  // Bug 3 fix: include posting_mode so cron.js knows draft vs live
+  const postingMode = document.getElementById('sched-posting-mode')?.value || 'inbox';
+
   const job = {
     id: `job_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
     images: valid,
@@ -1856,6 +1859,8 @@ async function addToQueue() {
     scheduledFor,
     hook: document.getElementById('gen-hook')?.value || '',
     accountLabel: acc.label,
+    status: 'pending',
+    posting_mode: postingMode,
   };
 
   if (!window.__serverQueue) window.__serverQueue = [];
@@ -2830,10 +2835,20 @@ function updateTikTokBtn(connected) {
     btn.style.borderColor = 'rgba(74,222,128,0.3)';
     btn.onclick = (e) => {
       e.preventDefault();
+      // Bug 4 fix: actually clear tokens from connectedAccounts too, not just stale localStorage keys
+      connectedAccounts.forEach(acc => {
+        acc.token = null;
+        acc.openId = null;
+        acc.refreshToken = null;
+        acc.expiresAt = null;
+      });
+      saveAccounts();
+      renderAccounts();
+      renderAccountSelector();
       localStorage.removeItem('tiktok_token');
       localStorage.removeItem('tiktok_open_id');
       updateTikTokBtn(false);
-      showToast('TikTok disconnected', '');
+      showToast('TikTok disconnected — reconnect from the Accounts tab', '');
     };
   } else {
     btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.01-.07z"/></svg> Connect TikTok`;
