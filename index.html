@@ -1659,12 +1659,13 @@ async function postDirectToTikTok(mode) {
   const caption = document.getElementById('caption-output')?.innerText || '';
   const draftBtn = document.getElementById('draft-btn');
   const liveBtn = document.getElementById('post-btn');
+
   if (draftBtn) draftBtn.disabled = true;
   if (liveBtn) liveBtn.disabled = true;
+
   const activeBtn = isLive ? liveBtn : draftBtn;
   if (activeBtn) activeBtn.textContent = isLive ? 'Posting...' : 'Saving to drafts...';
 
-  // Check token expiry — TikTok tokens last 24h
   if (acc.expiresAt && Date.now() > acc.expiresAt) {
     showToast('TikTok token expired — please reconnect your account in the Accounts tab', 'error');
     if (draftBtn) { draftBtn.disabled = false; draftBtn.textContent = '⬆ Save to Drafts'; }
@@ -1675,16 +1676,62 @@ async function postDirectToTikTok(mode) {
   try {
     const res = await fetch('/api/tiktok-auth', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-fal-key': getFalKey() },
-      body: JSON.stringify({ access_token: acc.token, open_id: acc.openId, images: valid, caption, posting_mode: isLive ? 'live' : 'inbox' }),
+      headers: {
+        'Content-Type': 'application/json',
+        'x-fal-key': getFalKey()
+      },
+      body: JSON.stringify({
+        access_token: acc.token,
+        open_id: acc.openId,
+        images: valid,
+        caption,
+        posting_mode: isLive ? 'live' : 'inbox'
+      }),
     });
-    const data = await res.json();
-    if (data.error) throw new Error(typeof data.error === 'object' ? JSON.stringify(data.error) : data.error);
-    document.getElementById('draft-success-card').style.display = 'block';
-    showToast(isLive ? 'Posted to TikTok! 🎉' : 'Saved to TikTok drafts! Open TikTok to publish.', 'success');
-  } catch(e) {
+
+    const raw = await res.text();
+    let data = {};
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch {
+      data = { ok: false, message: raw || `HTTP ${res.status}` };
+    }
+
+    if (!res.ok || data.ok === false || data.error) {
+      const message =
+        data.message ||
+        data.error?.message ||
+        (typeof data.error === 'string' ? data.error : '') ||
+        `TikTok request failed (${res.status})`;
+      const extra = data.log_id ? ` [log_id: ${data.log_id}]` : '';
+      throw new Error(message + extra);
+    }
+
+    const successCard = document.getElementById('draft-success-card');
+    const draftView = document.getElementById('success-card-draft');
+    const liveView = document.getElementById('success-card-live');
+    const successTitle = document.getElementById('success-card-title');
+
+    if (successCard) successCard.style.display = 'block';
+
+    if (isLive) {
+      if (successTitle) successTitle.textContent = 'Posted live — success';
+      if (draftView) draftView.style.display = 'none';
+      if (liveView) liveView.style.display = 'flex';
+    } else {
+      if (successTitle) successTitle.textContent = 'Saved to drafts — next steps';
+      if (draftView) draftView.style.display = 'flex';
+      if (liveView) liveView.style.display = 'none';
+    }
+
+    showToast(
+      isLive ? 'Posted to TikTok successfully' : 'Saved to TikTok drafts successfully',
+      'success'
+    );
+  } catch (e) {
     showToast('Post failed: ' + e.message, 'error');
   }
+
   if (draftBtn) { draftBtn.disabled = false; draftBtn.textContent = '⬆ Save to Drafts'; }
   if (liveBtn) { liveBtn.disabled = false; liveBtn.textContent = '✦ Post Live'; }
 }
@@ -2713,6 +2760,9 @@ function handleTikTokCallback() {
   if (params.get('tiktok_connected')) {
     const token = params.get('tiktok_token');
     const openId = params.get('tiktok_open_id');
+    const refreshToken = params.get('tiktok_refresh_token');
+    const expiresAt = params.get('tiktok_expires_at');
+    const scope = params.get('tiktok_scope');
     
     // Get pending label from localStorage
     const label = localStorage.getItem('pending_account_label') || 'TikTok Account ' + (connectedAccounts.length + 1);
@@ -2733,16 +2783,29 @@ function handleTikTokCallback() {
       if (connectedAccounts[idx]) {
         connectedAccounts[idx].token = token;
         connectedAccounts[idx].openId = openId;
+        connectedAccounts[idx].refreshToken = refreshToken || null;
+        connectedAccounts[idx].expiresAt = expiresAt ? Number(expiresAt) : null;
+        connectedAccounts[idx].scope = scope || null;
         showToast('TikTok connected to ' + connectedAccounts[idx].label, 'success');
       }
     } else {
       // Check if already connected by openId
       const existing = connectedAccounts.findIndex(a => a.openId === openId);
       if (existing >= 0) {
-        connectedAccounts[existing] = { label, desc, skinType, characterUrl, token, openId };
+        connectedAccounts[existing] = {
+          label, desc, skinType, characterUrl, token, openId,
+          refreshToken: refreshToken || null,
+          expiresAt: expiresAt ? Number(expiresAt) : null,
+          scope: scope || null
+        };
         showToast('Account updated: ' + label, 'success');
       } else {
-        connectedAccounts.push({ label, desc, skinType, characterUrl, token, openId });
+        connectedAccounts.push({
+          label, desc, skinType, characterUrl, token, openId,
+          refreshToken: refreshToken || null,
+          expiresAt: expiresAt ? Number(expiresAt) : null,
+          scope: scope || null
+        });
         showToast('Account connected: ' + label, 'success');
       }
     }
