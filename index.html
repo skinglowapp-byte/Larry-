@@ -1295,7 +1295,16 @@ const RV_NEGATIVE = 'cartoon, anime, illustration, painting, drawing, cgi, 3d re
 // Pass 1: Generate with FLUX Dev via fal-ai/flux-lora
 // FLUX architecture — far superior skin texture and photorealism vs SD-based models
 function buildRVBody(prompt, charUrl, hasLoRA, loraPath, loraTrigger, slideIndex) {
-  const realismSuffix = ', slightly looking away from camera, candid unaware expression, harsh unflattering indoor light, slightly awkward pose, slightly grainy phone camera, imperfect exposure, real cluttered home environment, NOT cinematic, NOT moody, NOT professional photography';
+  // Per-slide realism — early slides rawer, later slides still real but calmer
+  const realismSuffixes = [
+    ', ugly badly lit phone selfie, slightly motion blurred, harsh overhead light, cheap home, skin looks sore and reactive, NOT cinematic, NOT beautiful',
+    ', dim cheap lamp light, slightly grainy, ordinary messy home, skin still irritated, candid unaware, NOT staged, NOT moody',
+    ', flat indoor light, slightly washed out, ordinary bedroom, phone front camera, slightly off-centre, NOT professional',
+    ', natural window light flat and grey, slightly underexposed, ordinary home, real skin texture visible, NOT cinematic, NOT glowing',
+    ', flat daylight through window, slightly grainy, real home not staged, normal person not a model, NOT editorial, NOT magazine',
+    ', slightly overexposed daylight, phone camera, ordinary car or home, real person not a model, NOT cinematic, NOT golden hour',
+  ];
+  const realismSuffix = realismSuffixes[Math.min(slideIndex || 0, 5)];
 
   let finalPrompt = prompt + realismSuffix;
 
@@ -1309,16 +1318,16 @@ function buildRVBody(prompt, charUrl, hasLoRA, loraPath, loraTrigger, slideIndex
     negative_prompt: RV_NEGATIVE,
     image_size: { width: 768, height: 1360 },
     num_inference_steps: 28,
-    guidance_scale: 1.4,
+    guidance_scale: 1.2,
     num_images: 1,
     output_format: 'jpeg',
     enable_safety_checker: false,
     loras: [],
   };
 
-  // Account LoRA — face consistency
+  // Account LoRA — lower scale = less polished AI aesthetic from LoRA style bias
   if (hasLoRA && loraPath) {
-    input.loras.push({ path: loraPath, scale: 0.85 });
+    input.loras.push({ path: loraPath, scale: 0.75 });
   }
 
   return JSON.stringify({ endpoint: 'fal-ai/flux-lora', input });
