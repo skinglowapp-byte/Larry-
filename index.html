@@ -953,9 +953,9 @@ function nav(name) {
   document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('pane-' + name).classList.add('active');
-  const navItems = document.querySelectorAll('.nav-item');
-  const map = { setup: 0, hooks: 1, generate: 2, accounts: 3, performance: 4, schedule: 5 };
-  const idx = map[name]; if (idx !== undefined && idx >= 0 && navItems[idx]) navItems[idx].classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') === `nav('${name}')`) n.classList.add('active');
+  });
   if (name === 'hooks') syncHookContext();
   if (name === 'generate') { syncGenHook(); renderSlidePreviewPlaceholders(); renderAccountSelector(); }
   if (name === 'performance') renderPerfTable();
