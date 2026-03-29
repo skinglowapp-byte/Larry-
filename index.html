@@ -1070,26 +1070,37 @@ async function generateHooks() {
   const count = document.getElementById('hook-count').value;
   const context = document.getElementById('hook-context').value;
 
-  const prompt = `You are a viral TikTok content strategist specialising in sensitive skincare content for eczema and rosacea sufferers.
+  const prompt = `You are a viral TikTok content strategist who specialises in sensitive skincare content for eczema and rosacea sufferers.
 
-Your proven hook formula: [Another person] + [conflict or doubt] → showed them something → they changed their mind or were shocked.
+PROVEN WINNING HOOK (628 views, 98% FYP traffic on a brand new account):
+"I spent 6 months avoiding mirrors because of my rosacea until a random girl at Sephora told me about this"
 
-High-performing hook patterns for this niche:
-1. Sceptic converted: "My dermatologist told me to stop buying random products so I let AI build my routine instead"
-2. Reaction hook: "I showed my mom what AI recommended for my rosacea and she threw out her entire bathroom shelf"  
-3. Frustration release: "My skin was flaring every single week until I stopped guessing and did this instead"
-4. Before/after tease: "This is what 4 weeks of AI-built skincare looks like on eczema skin"
-5. Relatable struggle: "I spent $400 on skincare that made my rosacea worse until a stranger told me about this"
-6. Challenge hook: "My boyfriend said AI couldn't fix my skin. I showed him my week 4 results"
+Break down WHY this hook worked:
+- Specific time period ("6 months") — makes it feel real not vague
+- Specific embarrassing behaviour ("avoiding mirrors") — deeply relatable shame moment
+- Unexpected specific source ("a random girl at Sephora") — not a doctor, not an ad, a real person
+- Open loop ("told me about this") — forces the swipe to find out what
 
-Rules:
-- Speak directly to eczema/rosacea sufferers — mention their specific struggle
-- Create a tiny story in the viewer's head before they even swipe
-- Never mention app features, prices, or benefits directly
-- No medical claims about curing conditions
-- Use natural, conversational American English
-- Make it feel like something a real person would say to a friend
-- Vary the hook type across your ${count} hooks — don't repeat the same pattern
+HOOK FORMULA (must follow this structure):
+[Specific time period] + [specific embarrassing/painful behaviour caused by skin] + [unexpected real-world source] + [open loop ending]
+
+HIGH-PERFORMING PATTERNS — model every hook on these:
+1. Avoidance hook: "I spent [X months/years] [avoiding something normal] because of my [rosacea/eczema] until [unexpected person] showed me [open loop]"
+2. Money wasted hook: "I spent $[amount] on [specific products] that made my [rosacea/eczema] worse until a [unexpected person] at [specific place] told me to stop"  
+3. Hiding hook: "I [cancelled/turned down/quit] [specific normal life thing] [X times] because of my skin flaring until [unexpected source]"
+4. Relationship hook: "My [partner/mum/friend] thought I was being dramatic about my skin until they saw what [unexpected thing] did in [timeframe]"
+5. Stranger moment hook: "A stranger [at specific place] noticed my [rosacea/eczema] and said something that completely changed how I treat my skin"
+6. Before work/event hook: "I used to [specific routine/ritual] before every [work/date/event] just to cover my rosacea flare until [unexpected discovery]"
+
+CRITICAL RULES:
+- Always include a SPECIFIC time period (3 weeks, 6 months, 2 years — never vague)
+- Always include a SPECIFIC embarrassing or painful behaviour — the more specific the better
+- The source of change must feel unexpected and real — a stranger, a random person, not a doctor or ad
+- End with an open loop — "told me about this", "showed me something", "changed everything"
+- Never mention the app name, AI, or any product directly in the hook
+- No medical claims
+- Write in natural first-person conversational English — sounds like a real person texting a friend
+- Each hook must feel like a different story — vary the time period, behaviour, and source
 
 App context:
 ${context}
