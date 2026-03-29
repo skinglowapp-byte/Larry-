@@ -1279,23 +1279,26 @@ function removeLoRA(index) {
 // Pass 2: Crystal Upscaler (face-specific enhancement)
 
 // FLUX negative prompt — keep minimal, FLUX doesn't use weighted negatives like SD
-const RV_NEGATIVE = 'cartoon, anime, illustration, painting, drawing, cgi, 3d render, airbrushed, smooth plastic skin, perfect flawless skin, perfect symmetrical face, beauty retouch, watermark, text, logo, blurry, deformed, bad anatomy, extra limbs, studio flash, ring light, rim light, key light, fill light, beauty dish, softbox, golden hour, cinematic lighting, dramatic lighting, professional photography, perfectly lit, staged, stock photo, flattering light, beauty lighting, soft light, model pose, model face, looking directly at camera, glossy skin, porcelain skin, perfect complexion, magazine photo, fashion photo, high fashion, editorial, perfect composition, centred portrait, symmetrical composition, hyperrealistic rendering, too detailed, overprocessed, HDR, oversaturated, digital art';
+const RV_NEGATIVE = 'cartoon, anime, illustration, painting, drawing, cgi, 3d render, airbrushed, smooth plastic skin, perfect flawless skin, perfect symmetrical face, beauty retouch, watermark, text, logo, blurry, deformed, bad anatomy, extra limbs, studio flash, ring light, rim light, key light, fill light, beauty dish, softbox, golden hour, cinematic lighting, cinematic, moody lighting, moody, dramatic lighting, atmospheric lighting, film lighting, warm glow, colour graded, teal orange, warm colour grade, professional photography, perfectly lit, staged, stock photo, flattering light, beauty lighting, soft light, model pose, model face, looking directly at camera, glossy skin, porcelain skin, perfect complexion, magazine photo, fashion photo, high fashion, editorial, perfect composition, centred portrait, symmetrical composition, hyperrealistic rendering, too detailed, overprocessed, HDR, oversaturated, digital art, beautiful lighting, gorgeous lighting';
 
 // Pass 1: Generate with FLUX Dev via fal-ai/flux-lora
 // FLUX architecture — far superior skin texture and photorealism vs SD-based models
 function buildRVBody(prompt, charUrl, hasLoRA, loraPath, loraTrigger, slideIndex) {
-  // Match the settings that produced realistic results in FAL testing:
-  // guidance_scale 1.8 = messy/candid, steps 28 = less polished
-  const basePrompt = hasLoRA && loraTrigger ? `${loraTrigger}, ${prompt}` : prompt;
+  const realismSuffix = ', slightly looking away from camera, candid unaware expression, harsh unflattering indoor light, slightly awkward pose, slightly grainy phone camera, imperfect exposure, real cluttered home environment, NOT cinematic, NOT moody, NOT professional photography';
 
-  // Add realism anchors to prompt — same ones that worked in FAL tests
-  const realismSuffix = ', slightly looking away from camera, candid unaware expression, harsh unflattering light, slightly awkward pose, slightly grainy, imperfect exposure, real environment not staged';
-  
+  let finalPrompt = prompt + realismSuffix;
+
+  // Prepend trigger word for LoRA
+  if (hasLoRA && loraTrigger) {
+    finalPrompt = `${loraTrigger}, ${finalPrompt}`;
+  }
+
   const input = {
-    prompt: basePrompt + realismSuffix,
+    prompt: finalPrompt,
+    negative_prompt: RV_NEGATIVE,
     image_size: { width: 768, height: 1360 },
     num_inference_steps: 28,
-    guidance_scale: 1.8,
+    guidance_scale: 1.4,
     num_images: 1,
     output_format: 'jpeg',
     enable_safety_checker: false,
@@ -1304,8 +1307,7 @@ function buildRVBody(prompt, charUrl, hasLoRA, loraPath, loraTrigger, slideIndex
 
   // Account LoRA — face consistency
   if (hasLoRA && loraPath) {
-    input.loras.push({ path: loraPath, scale: 0.9 });
-    if (loraTrigger) input.prompt = `${loraTrigger}, ${input.prompt}`;
+    input.loras.push({ path: loraPath, scale: 0.85 });
   }
 
   return JSON.stringify({ endpoint: 'fal-ai/flux-lora', input });
