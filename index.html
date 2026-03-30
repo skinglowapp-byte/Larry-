@@ -1223,7 +1223,7 @@ async function trainLoRA(accountIndex) {
         guidance_scale: 3.2,
         num_images: 1,
         output_format: 'jpeg',
-        loras: [{ path: 'https://huggingface.co/XLabs-AI/flux-RealismLora/resolve/main/lora.safetensors', scale: 0.85 }],
+        loras: [],
         ip_adapter: [{ path: 'https://huggingface.co/XLabs-AI/flux-ip-adapter/resolve/main/ip_adapter.safetensors', image_url: acc.characterUrl, scale: 0.85 }]
       }, falKey);
       if (data.images?.[0]?.url) trainingImages.push(data.images[0].url);
@@ -1318,7 +1318,7 @@ function buildRVBody(prompt, charUrl, hasLoRA, loraPath, loraTrigger, slideIndex
     negative_prompt: RV_NEGATIVE,
     image_size: { width: 768, height: 1360 },
     num_inference_steps: 28,
-    guidance_scale: 1.2,
+    guidance_scale: 1.8,
     num_images: 1,
     output_format: 'jpeg',
     enable_safety_checker: false,
@@ -1327,7 +1327,7 @@ function buildRVBody(prompt, charUrl, hasLoRA, loraPath, loraTrigger, slideIndex
 
   // Account LoRA — lower scale = less polished AI aesthetic from LoRA style bias
   if (hasLoRA && loraPath) {
-    input.loras.push({ path: loraPath, scale: 0.75 });
+    input.loras.push({ path: loraPath, scale: 0.9 });
   }
 
   return JSON.stringify({ endpoint: 'fal-ai/flux-lora', input });
@@ -2230,9 +2230,7 @@ async function generateCharacter() {
       num_images: 1,
       output_format: 'jpeg',
       enable_safety_checker: false,
-      loras: [
-        { path: 'https://huggingface.co/XLabs-AI/flux-RealismLora/resolve/main/lora.safetensors', scale: 0.85 }
-      ],
+      loras: [],
     }, falKey);
     if (!data.images?.[0]?.url) throw new Error(JSON.stringify(data.error || data));
 
