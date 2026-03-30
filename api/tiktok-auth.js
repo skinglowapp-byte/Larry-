@@ -1,16 +1,12 @@
 // api/tiktok-auth.js
-// Handles TikTok OAuth and photo posting via PULL_FROM_URL + Vercel Blob REST API
-// Uses Vercel Blob REST API directly (no @vercel/blob package needed)
-// Vercel domain (larry-slidshow.vercel.app) is verified in TikTok developer portal
+// Handles TikTok OAuth and photo posting
+// Images uploaded to Vercel Blob, served via larry-slidshow.vercel.app/api/serve (verified domain)
 
 export const config = { maxDuration: 60 };
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 function truncateUtf16(str, maxUnits) {
   const s = String(str || '');
-  let out = '';
-  let units = 0;
+  let out = '', units = 0;
   for (const ch of s) {
     const needed = ch.length;
     if (units + needed > maxUnits) break;
@@ -23,12 +19,12 @@ function truncateUtf16(str, maxUnits) {
 function normalizeTitle(caption) {
   const lines = caption ? caption.split(/[\n\r]+/).map(l => l.trim()).filter(Boolean) : [];
   const line = lines.find(l => !l.startsWith('#')) || '';
-  const cleaned = line.replace(/#\w+/g, '').replace(/[<>"]/g, '').replace(/\s+/g, ' ').trim();
+  const cleaned = line.replace(/#\w+/g, '').replace(/[^\x20-\x7E]/g, '').replace(/[<>"]/g, '').replace(/\s+/g, ' ').trim();
   return truncateUtf16(cleaned || 'My skincare journey', 90);
 }
 
 function normalizeDescription(caption) {
-  return truncateUtf16(String(caption || '').trim(), 4000);
+  return truncateUtf16(String(caption || '').replace(/[^\x20-\x7E\n]/g, '').trim(), 4000);
 }
 
 function extractTikTokError(payload, fallbackStatus) {
@@ -41,16 +37,16 @@ function extractTikTokError(payload, fallbackStatus) {
   };
 }
 
-// Upload a buffer to Vercel Blob via REST API (no SDK needed)
-async function uploadToBlob(buffer, filename, token) {
+// Upload image buffer to Vercel Blob, return the serve URL via our verified domain
+async function uploadToBlob(buffer, fileId, token) {
+  const filename = `slides/${fileId}.jpg`;
   const res = await fetch(`https://blob.vercel-storage.com/${filename}`, {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'image/jpeg',
       'x-api-version': '7',
-      'x-content-type': 'image/jpeg',
-      'x-cache-control-max-age': '60',
+      'x-cache-control-max-age': '300',
     },
     body: buffer,
   });
@@ -58,13 +54,22 @@ async function uploadToBlob(buffer, filename, token) {
     const text = await res.text();
     throw new Error(`Blob upload failed: ${res.status} ${text}`);
   }
-  const data = await res.json();
-  return data.url;
+  // Return URL through our verified domain instead of blob.vercel-storage.com
+  return `https://larry-slidshow.vercel.app/api/serve?id=${fileId}.jpg`;
 }
 
-// Delete a blob via REST API
-async function deleteBlob(url, token) {
+// Delete a blob by its fileId
+async function deleteBlob(fileId, token) {
   try {
+    const filename = `slides/${fileId}.jpg`;
+    // First get the blob URL
+    const listRes = await fetch(`https://blob.vercel-storage.com?prefix=${filename}`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'x-api-version': '7' }
+    });
+    const listData = await listRes.json();
+    const blobUrl = listData?.blobs?.[0]?.url;
+    if (!blobUrl) return;
+
     await fetch('https://blob.vercel-storage.com/delete', {
       method: 'POST',
       headers: {
@@ -72,14 +77,12 @@ async function deleteBlob(url, token) {
         'Content-Type': 'application/json',
         'x-api-version': '7',
       },
-      body: JSON.stringify({ urls: [url] }),
+      body: JSON.stringify({ urls: [blobUrl] }),
     });
   } catch(e) {
     console.log('[Blob cleanup] failed:', e.message);
   }
 }
-
-// ── Handler ───────────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -88,7 +91,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // ── Step 1: Generate OAuth URL ───────────────────────────────────────────
+  // ── OAuth URL ──────────────────────────────────────────────────────────────
   if (req.method === 'GET' && !req.query.code) {
     const clientKey = process.env.TIKTOK_CLIENT_KEY;
     if (!clientKey) return res.status(500).json({ error: 'TIKTOK_CLIENT_KEY not set' });
@@ -99,8 +102,7 @@ export default async function handler(req, res) {
     const state = `${Math.random().toString(36).slice(2)}_idx${accountIdx}`;
 
     const authUrl = `https://www.tiktok.com/v2/auth/authorize?` +
-      `client_key=${clientKey}` +
-      `&response_type=code` +
+      `client_key=${clientKey}&response_type=code` +
       `&scope=${encodeURIComponent(scope)}` +
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       `&state=${state}`;
@@ -108,13 +110,10 @@ export default async function handler(req, res) {
     return res.redirect(authUrl);
   }
 
-  // ── Step 2: Handle OAuth callback ───────────────────────────────────────
+  // ── OAuth callback ─────────────────────────────────────────────────────────
   if (req.query.code || req.query.error) {
     const { code, error, error_description, state } = req.query;
-
-    if (error) {
-      return res.redirect(`/?tiktok_error=${encodeURIComponent(error_description || error)}`);
-    }
+    if (error) return res.redirect(`/?tiktok_error=${encodeURIComponent(error_description || error)}`);
 
     const clientKey = process.env.TIKTOK_CLIENT_KEY;
     const clientSecret = process.env.TIKTOK_CLIENT_SECRET;
@@ -126,19 +125,10 @@ export default async function handler(req, res) {
       const tokenRes = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          client_key: clientKey,
-          client_secret: clientSecret,
-          code,
-          grant_type: 'authorization_code',
-          redirect_uri: redirectUri,
-        })
+        body: new URLSearchParams({ client_key: clientKey, client_secret: clientSecret, code, grant_type: 'authorization_code', redirect_uri: redirectUri })
       });
-
       const tokenData = await tokenRes.json();
-      if (tokenData.error) {
-        return res.redirect(`/?tiktok_error=${encodeURIComponent(tokenData.error_description || tokenData.error)}`);
-      }
+      if (tokenData.error) return res.redirect(`/?tiktok_error=${encodeURIComponent(tokenData.error_description || tokenData.error)}`);
 
       const { access_token, refresh_token, expires_in, open_id, scope: grantedScope } = tokenData;
       const expiresAt = Date.now() + ((expires_in || 86400) - 300) * 1000;
@@ -157,7 +147,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── Step 3: Refresh access token ────────────────────────────────────────
+  // ── Refresh token ──────────────────────────────────────────────────────────
   if (req.method === 'POST' && req.body?.action === 'refresh_token') {
     const { refresh_token } = req.body;
     if (!refresh_token) return res.status(400).json({ error: 'Missing refresh_token' });
@@ -165,12 +155,7 @@ export default async function handler(req, res) {
       const tokenRes = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          client_key: process.env.TIKTOK_CLIENT_KEY,
-          client_secret: process.env.TIKTOK_CLIENT_SECRET,
-          grant_type: 'refresh_token',
-          refresh_token,
-        })
+        body: new URLSearchParams({ client_key: process.env.TIKTOK_CLIENT_KEY, client_secret: process.env.TIKTOK_CLIENT_SECRET, grant_type: 'refresh_token', refresh_token })
       });
       const data = await tokenRes.json();
       if (data.error) return res.status(400).json({ error: data.error_description || data.error });
@@ -181,60 +166,48 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── Step 4: Post photos via Vercel Blob + PULL_FROM_URL ──────────────────
+  // ── Post photos ────────────────────────────────────────────────────────────
   if (req.method === 'POST') {
     const { access_token, images, caption, posting_mode } = req.body;
-
-    if (!access_token || !images || images.length === 0) {
-      return res.status(400).json({ error: 'Missing access_token or images' });
-    }
+    if (!access_token || !images?.length) return res.status(400).json({ error: 'Missing access_token or images' });
 
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
-    if (!blobToken) {
-      return res.status(500).json({ error: 'BLOB_READ_WRITE_TOKEN not set in Vercel environment variables' });
-    }
+    if (!blobToken) return res.status(500).json({ error: 'BLOB_READ_WRITE_TOKEN not set' });
 
     const isLive = posting_mode === 'live';
     const cleanTitle = normalizeTitle(caption);
     const cleanDescription = normalizeDescription(caption);
-    const uploadedUrls = [];
+    const uploadedIds = [];
 
     try {
-      // Step 1: Upload each image to Vercel Blob via REST API
+      // Upload images to Blob, get URLs via our verified domain
       const photoUrls = [];
       for (let i = 0; i < images.length; i++) {
         const base64 = images[i].replace(/^data:image\/\w+;base64,/, '');
         const buffer = Buffer.from(base64, 'base64');
-        const filename = `slides/${Date.now()}-${i}.jpg`;
-
-        const blobUrl = await uploadToBlob(buffer, filename, blobToken);
-        uploadedUrls.push(blobUrl);
-        photoUrls.push(blobUrl);
-        console.log(`[TikTok] uploaded slide ${i + 1}: ${blobUrl}`);
+        const fileId = `${Date.now()}-${i}`;
+        const serveUrl = await uploadToBlob(buffer, fileId, blobToken);
+        uploadedIds.push(fileId);
+        photoUrls.push(serveUrl);
+        console.log(`[TikTok] uploaded slide ${i + 1}: ${serveUrl}`);
       }
 
-      // Step 2: For live posts, get valid privacy level
+      // For live posts, get valid privacy level
       const postInfo = { title: cleanTitle, description: cleanDescription };
-
       if (isLive) {
         const creatorRes = await fetch('https://open.tiktokapis.com/v2/post/publish/creator_info/query/', {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${access_token}`,
-            'Content-Type': 'application/json; charset=UTF-8',
-          },
+          headers: { 'Authorization': `Bearer ${access_token}`, 'Content-Type': 'application/json; charset=UTF-8' },
           body: JSON.stringify({}),
         });
         const creatorData = await creatorRes.json();
         const privacyOptions = creatorData?.data?.privacy_level_options || [];
-        postInfo.privacy_level = privacyOptions.includes('PUBLIC_TO_EVERYONE')
-          ? 'PUBLIC_TO_EVERYONE'
-          : (privacyOptions[0] || 'SELF_ONLY');
+        postInfo.privacy_level = privacyOptions.includes('PUBLIC_TO_EVERYONE') ? 'PUBLIC_TO_EVERYONE' : (privacyOptions[0] || 'SELF_ONLY');
         postInfo.disable_comment = false;
         postInfo.auto_add_music = true;
       }
 
-      // Step 3: Init TikTok post with PULL_FROM_URL
+      // Init TikTok post with PULL_FROM_URL via our verified domain
       const initPayload = {
         media_type: 'PHOTO',
         post_mode: isLive ? 'DIRECT_POST' : 'MEDIA_UPLOAD',
@@ -246,14 +219,12 @@ export default async function handler(req, res) {
         },
       };
 
-      console.log('[TikTok] posting mode:', posting_mode, '| images:', photoUrls.length);
+      console.log('[TikTok] mode:', posting_mode, '| images:', photoUrls.length);
+      console.log('[TikTok] photo URLs:', photoUrls);
 
       const initRes = await fetch('https://open.tiktokapis.com/v2/post/publish/content/init/', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${access_token}`,
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
+        headers: { 'Authorization': `Bearer ${access_token}`, 'Content-Type': 'application/json; charset=UTF-8' },
         body: JSON.stringify(initPayload),
       });
 
@@ -267,18 +238,19 @@ export default async function handler(req, res) {
       if (!initRes.ok || (initData?.error?.code && initData.error.code !== 'ok')) {
         const normalized = extractTikTokError(initData, initRes.status);
         const extra = normalized.log_id ? ` [log_id: ${normalized.log_id}]` : '';
-        setTimeout(() => uploadedUrls.forEach(u => deleteBlob(u, blobToken)), 5000);
+        // Clean up blobs on failure
+        setTimeout(() => uploadedIds.forEach(id => deleteBlob(id, blobToken)), 2000);
         return res.status(400).json({ error: normalized.message + extra, detail: normalized });
       }
 
-      // Clean up blobs after 60s (TikTok needs time to pull them)
-      setTimeout(() => uploadedUrls.forEach(u => deleteBlob(u, blobToken)), 60000);
+      // Clean up blobs after 5 mins (TikTok needs time to pull them)
+      setTimeout(() => uploadedIds.forEach(id => deleteBlob(id, blobToken)), 300000);
 
       return res.status(200).json({ publish_id: initData?.data?.publish_id, ok: true });
 
     } catch (e) {
       console.error('[TikTok] error:', e.message);
-      uploadedUrls.forEach(u => deleteBlob(u, blobToken));
+      uploadedIds.forEach(id => deleteBlob(id, blobToken));
       return res.status(500).json({ error: e.message });
     }
   }
