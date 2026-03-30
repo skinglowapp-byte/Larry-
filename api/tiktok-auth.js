@@ -1,8 +1,7 @@
 // api/tiktok-auth.js
-// Handles TikTok OAuth and photo posting via PULL_FROM_URL + Vercel Blob
-// Vercel Blob domain (larry-slidshow.vercel.app) is verified in TikTok developer portal
-
-import { put, del } from '@vercel/blob';
+// Handles TikTok OAuth and photo posting via PULL_FROM_URL + Vercel Blob REST API
+// Uses Vercel Blob REST API directly (no @vercel/blob package needed)
+// Vercel domain (larry-slidshow.vercel.app) is verified in TikTok developer portal
 
 export const config = { maxDuration: 60 };
 
@@ -40,6 +39,44 @@ function extractTikTokError(payload, fallbackStatus) {
     message: err.message || err.error_description || err.error || 'TikTok request failed',
     log_id: err.log_id || null,
   };
+}
+
+// Upload a buffer to Vercel Blob via REST API (no SDK needed)
+async function uploadToBlob(buffer, filename, token) {
+  const res = await fetch(`https://blob.vercel-storage.com/${filename}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'image/jpeg',
+      'x-api-version': '7',
+      'x-content-type': 'image/jpeg',
+      'x-cache-control-max-age': '60',
+    },
+    body: buffer,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Blob upload failed: ${res.status} ${text}`);
+  }
+  const data = await res.json();
+  return data.url;
+}
+
+// Delete a blob via REST API
+async function deleteBlob(url, token) {
+  try {
+    await fetch('https://blob.vercel-storage.com/delete', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'x-api-version': '7',
+      },
+      body: JSON.stringify({ urls: [url] }),
+    });
+  } catch(e) {
+    console.log('[Blob cleanup] failed:', e.message);
+  }
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
@@ -152,42 +189,32 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing access_token or images' });
     }
 
-    if (!process.env.BLOB_READ_WRITE_TOKEN) {
-      return res.status(500).json({ error: 'BLOB_READ_WRITE_TOKEN not set — add it in Vercel environment variables' });
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+    if (!blobToken) {
+      return res.status(500).json({ error: 'BLOB_READ_WRITE_TOKEN not set in Vercel environment variables' });
     }
 
     const isLive = posting_mode === 'live';
     const cleanTitle = normalizeTitle(caption);
     const cleanDescription = normalizeDescription(caption);
-
-    const uploadedBlobs = [];
+    const uploadedUrls = [];
 
     try {
-      // Step 1: Upload each image to Vercel Blob
-      // URLs will be like: https://xxxx.public.blob.vercel-storage.com/...
-      // TikTok accepts these because larry-slidshow.vercel.app is verified
+      // Step 1: Upload each image to Vercel Blob via REST API
       const photoUrls = [];
       for (let i = 0; i < images.length; i++) {
         const base64 = images[i].replace(/^data:image\/\w+;base64,/, '');
         const buffer = Buffer.from(base64, 'base64');
-        const filename = `tiktok-slide-${Date.now()}-${i}.jpg`;
+        const filename = `slides/${Date.now()}-${i}.jpg`;
 
-        const blob = await put(filename, buffer, {
-          access: 'public',
-          contentType: 'image/jpeg',
-          token: process.env.BLOB_READ_WRITE_TOKEN,
-        });
-
-        uploadedBlobs.push(blob.url);
-        photoUrls.push(blob.url);
-        console.log(`[TikTok] uploaded slide ${i + 1} to Blob: ${blob.url}`);
+        const blobUrl = await uploadToBlob(buffer, filename, blobToken);
+        uploadedUrls.push(blobUrl);
+        photoUrls.push(blobUrl);
+        console.log(`[TikTok] uploaded slide ${i + 1}: ${blobUrl}`);
       }
 
-      // Step 2: For live posts, get valid privacy level from creator info
-      const postInfo = {
-        title: cleanTitle,
-        description: cleanDescription,
-      };
+      // Step 2: For live posts, get valid privacy level
+      const postInfo = { title: cleanTitle, description: cleanDescription };
 
       if (isLive) {
         const creatorRes = await fetch('https://open.tiktokapis.com/v2/post/publish/creator_info/query/', {
@@ -219,7 +246,7 @@ export default async function handler(req, res) {
         },
       };
 
-      console.log('[TikTok] init payload:', JSON.stringify(initPayload));
+      console.log('[TikTok] posting mode:', posting_mode, '| images:', photoUrls.length);
 
       const initRes = await fetch('https://open.tiktokapis.com/v2/post/publish/content/init/', {
         method: 'POST',
@@ -233,42 +260,28 @@ export default async function handler(req, res) {
       const initText = await initRes.text();
       let initData;
       try { initData = JSON.parse(initText); }
-      catch(e) { return res.status(502).json({ error: 'TikTok non-JSON response: ' + initText.slice(0, 200) }); }
+      catch(e) { return res.status(502).json({ error: 'TikTok non-JSON: ' + initText.slice(0, 200) }); }
 
       console.log('[TikTok] init response:', JSON.stringify(initData));
 
       if (!initRes.ok || (initData?.error?.code && initData.error.code !== 'ok')) {
         const normalized = extractTikTokError(initData, initRes.status);
         const extra = normalized.log_id ? ` [log_id: ${normalized.log_id}]` : '';
-        // Clean up blobs on failure
-        await cleanupBlobs(uploadedBlobs);
+        setTimeout(() => uploadedUrls.forEach(u => deleteBlob(u, blobToken)), 5000);
         return res.status(400).json({ error: normalized.message + extra, detail: normalized });
       }
 
-      const publishId = initData?.data?.publish_id;
+      // Clean up blobs after 60s (TikTok needs time to pull them)
+      setTimeout(() => uploadedUrls.forEach(u => deleteBlob(u, blobToken)), 60000);
 
-      // Step 4: Clean up blobs after TikTok has pulled them (wait 30s)
-      // Don't await — let it run in background
-      setTimeout(() => cleanupBlobs(uploadedBlobs), 30000);
-
-      return res.status(200).json({ publish_id: publishId, ok: true });
+      return res.status(200).json({ publish_id: initData?.data?.publish_id, ok: true });
 
     } catch (e) {
       console.error('[TikTok] error:', e.message);
-      await cleanupBlobs(uploadedBlobs);
+      uploadedUrls.forEach(u => deleteBlob(u, blobToken));
       return res.status(500).json({ error: e.message });
     }
   }
 
   return res.status(400).json({ error: 'Invalid action' });
-}
-
-async function cleanupBlobs(urls) {
-  for (const url of urls) {
-    try {
-      await del(url, { token: process.env.BLOB_READ_WRITE_TOKEN });
-    } catch(e) {
-      console.log('[Blob cleanup] failed for', url, e.message);
-    }
-  }
 }
