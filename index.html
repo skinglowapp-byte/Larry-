@@ -2505,26 +2505,52 @@ async function bulkGenerate() {
     bulkLog(`Generating ${count - hooks.length} hooks with Claude...`, 'info');
     try {
       const context = document.getElementById('hook-context').value || 'Aureya — AI skincare for eczema/rosacea';
-      const res = await fetch('/api/claude', {
+      const hookRes = await fetch('/api/claude', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-anthropic-key': getAnthropicKey() },
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
-          max_tokens: 800,
-          messages: [{ role: 'user', content: `Generate ${count - hooks.length} unique viral TikTok hooks for an AI skincare app targeting eczema/rosacea sufferers. Formula: [person] + [conflict] → showed them AI → changed their mind. Return ONLY a JSON array. Context: ${context}` }]
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: `You are a viral TikTok content strategist for sensitive skincare (eczema/rosacea).
+
+PROVEN WINNING HOOK FORMULA:
+[Specific time period] + [specific embarrassing behaviour caused by skin] + [unexpected real-world source] + [open loop ending]
+
+Example: "I spent 6 months avoiding mirrors because of my rosacea until a random girl at Sephora told me about this"
+
+Generate ${count - hooks.length} unique hooks following this exact formula. Rules:
+- Always include a specific time period (3 weeks, 6 months, 2 years)
+- Always include a specific embarrassing or painful behaviour
+- The source must feel unexpected and real (stranger, coworker, neighbour — never a doctor or ad)
+- End with an open loop ("told me about this", "showed me something", "changed everything")
+- Never mention an app, AI, or product directly
+- Natural first-person conversational English
+
+Context: ${context}
+
+Return ONLY a JSON array of strings. No preamble, no markdown.` }]
         })
       });
-      const data = await res.json();
-      const text = data.content?.[0]?.text || '[]';
-      const generated = JSON.parse(text.replace(/```json|```/g,'').trim());
+      const hookData = await hookRes.json();
+      const hookText = hookData.content?.[0]?.text || '[]';
+      const generated = JSON.parse(hookText.replace(/\`\`\`json|\`\`\`/g,'').trim());
       hooks = [...hooks, ...generated].slice(0, count);
     } catch(e) {
-      bulkLog('Hook generation failed: ' + e.message, 'err');
+      bulkLog('Hook generation failed: ' + e.message + ' — using fallback hooks', 'err');
+      const fallbacks = [
+        'I spent 8 months cancelling plans because of my rosacea until a stranger at the pharmacy told me about this',
+        'I wasted $400 on products that made my eczema worse until my neighbour noticed and said something',
+        'I wore turtlenecks in summer for 6 months to hide my neck eczema until a woman at the gym told me to stop',
+        'I turned down a promotion because I was too embarrassed about my skin flaring until a coworker changed everything',
+        'I stopped going to the gym for 4 months because of my rosacea until a random woman in the changing room said this',
+      ];
+      hooks = [...hooks, ...fallbacks].slice(0, count);
     }
   }
 
   const allSlideshows = [];
 
+  try {
   for (let s = 0; s < count; s++) {
     const hook = hooks[s] || `Slideshow ${s+1}`;
     bulkLog(`Slideshow ${s+1}/${count}: "${hook.slice(0,40)}..."`, 'info');
@@ -2599,9 +2625,18 @@ Return ONLY a JSON array of exactly 6 objects:
       try {
         const falData = await callFal(rvBody.endpoint, rvBody.input, getFalKey());
         if (!falData.images?.[0]?.url) throw new Error(JSON.stringify(falData.error || 'No image'));
+        // Pass 2: Crystal Upscaler for face enhancement
+        let currentUrl = falData.images[0].url;
+        try {
+          bulkLog(`  Slide ${i+1} Pass 2: Enhancing face...`);
+          const upscaled = await runCrystalUpscaler(currentUrl, getFalKey());
+          if (upscaled) currentUrl = upscaled;
+        } catch(e2) {
+          bulkLog(`  Slide ${i+1} Pass 2 skipped: ${e2.message}`);
+        }
         // Apply text overlay same as single generator
         const textOverlay = planEntry?.text || (i === 0 ? hook : '');
-        const finalUrl = textOverlay ? await compositeTextOnImage(falData.images[0].url, textOverlay, i, variant.label) : falData.images[0].url;
+        const finalUrl = textOverlay ? await compositeTextOnImage(currentUrl, textOverlay, i, variant.label) : currentUrl;
         images.push({ url: finalUrl, label: variant.label, slideNum: i + 1, isFirst });
         bulkLog(`  Slide ${i+1} ✓`, 'ok');
       } catch(e) {
@@ -2624,13 +2659,20 @@ Return ONLY a JSON array of exactly 6 objects:
       await new Promise(r => setTimeout(r, 300));
       const a = document.createElement('a');
       a.href = images[i].url;
-      a.download = `slideshow-${s+1}-${hookSlug}-slide-${i+1}.png`;
+      a.download = `slideshow-${s+1}-${hookSlug}-slide-${i+1}.jpg`;
       a.click();
     }
   }
 
   showToast(`${count} slideshows generated and downloaded!`, 'success');
-  btn.disabled = false;
+  setBulkProgress(100, 'Complete!');
+  } catch(e) {
+    showToast('Bulk generation error: ' + e.message, 'error');
+    bulkLog('Fatal error: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    setBulkProgress(100, 'Done');
+  }
 }
 
 // ─── TEXT OVERLAY ON CANVAS ───────────────────────────────────────────────────
