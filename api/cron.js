@@ -1,5 +1,7 @@
 // api/cron.js
-import { kvLRange, kvRPush, kvDel, kvLTrim, KEYS } from '../lib/kv.js';
+import { kvLRange, kvRPush, kvDel, KEYS } from '../lib/kv.js';
+
+export const config = { maxDuration: 60 };
 
 export default async function handler(req, res) {
   const authHeader = req.headers.authorization;
@@ -30,7 +32,6 @@ export default async function handler(req, res) {
     try {
       await postToTikTok(job);
 
-      // Reload queue fresh each iteration so we don't resurrect old jobs
       const latestQueue = await kvLRange(KEYS.QUEUE, 0, 99999);
       const remaining = latestQueue.filter(j => j.id !== job.id);
 
@@ -40,7 +41,6 @@ export default async function handler(req, res) {
         await kvRPush(KEYS.QUEUE, ...remaining);
       }
 
-      // Keep newest posted items first
       const postedEntry = { ...job, status: 'posted', postedAt: Date.now() };
       const existingPosted = await kvLRange(KEYS.POSTED, 0, 99999);
       const nextPosted = [postedEntry, ...existingPosted].slice(0, 100);
@@ -72,10 +72,11 @@ export default async function handler(req, res) {
   return res.status(200).json({ ok: true, processed: results.length, results });
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 function truncateUtf16(str, maxUnits) {
   const s = String(str || '');
-  let out = '';
-  let units = 0;
+  let out = '', units = 0;
   for (const ch of s) {
     const needed = ch.length;
     if (units + needed > maxUnits) break;
@@ -86,21 +87,14 @@ function truncateUtf16(str, maxUnits) {
 }
 
 function normalizeTitle(caption) {
-  const captionLines = caption
-    ? caption.split(/[\n\r]+/).map(l => l.trim()).filter(Boolean)
-    : [];
-  const titleLine = captionLines.find(l => !l.startsWith('#')) || '';
-  const cleaned = titleLine
-    .replace(/#\w+/g, '')
-    .replace(/[<>\"]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-
+  const lines = caption ? caption.split(/[\n\r]+/).map(l => l.trim()).filter(Boolean) : [];
+  const line = lines.find(l => !l.startsWith('#')) || '';
+  const cleaned = line.replace(/#\w+/g, '').replace(/[^\x20-\x7E]/g, '').replace(/[<>"]/g, '').replace(/\s+/g, ' ').trim();
   return truncateUtf16(cleaned || 'My skincare journey', 90);
 }
 
 function normalizeDescription(caption) {
-  return truncateUtf16(String(caption || '').trim(), 4000);
+  return truncateUtf16(String(caption || '').replace(/[^\x20-\x7E\n]/g, '').trim(), 4000);
 }
 
 function extractTikTokError(payload, fallbackStatus) {
@@ -110,8 +104,43 @@ function extractTikTokError(payload, fallbackStatus) {
     code: err.code || `http_${fallbackStatus || 500}`,
     message: err.message || err.error_description || err.error || 'TikTok request failed',
     log_id: err.log_id || null,
-    detail: payload || null,
   };
+}
+
+// Upload image to Vercel Blob, return serve URL via verified domain
+async function uploadToBlob(imageData, fileId, blobToken) {
+  let buffer;
+
+  if (typeof imageData === 'string' && imageData.startsWith('data:')) {
+    const base64 = imageData.replace(/^data:image\/\w+;base64,/, '');
+    buffer = Buffer.from(base64, 'base64');
+  } else if (typeof imageData === 'string' && imageData.startsWith('http')) {
+    const r = await fetch(imageData);
+    if (!r.ok) throw new Error(`Failed to fetch image: ${r.status}`);
+    buffer = Buffer.from(await r.arrayBuffer());
+  } else {
+    throw new Error(`Invalid image format for id=${fileId}`);
+  }
+
+  const filename = `slides/${fileId}.jpg`;
+  const res = await fetch(`https://blob.vercel-storage.com/${filename}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${blobToken}`,
+      'Content-Type': 'image/jpeg',
+      'x-api-version': '7',
+      'x-cache-control-max-age': '600',
+    },
+    body: buffer,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Blob upload failed: ${res.status} ${text}`);
+  }
+
+  // Return URL through our verified domain
+  return `https://larry-slidshow.vercel.app/api/serve?id=${fileId}.jpg`;
 }
 
 async function getCreatorInfo(accessToken) {
@@ -123,101 +152,46 @@ async function getCreatorInfo(accessToken) {
     },
     body: JSON.stringify({}),
   });
-
   const infoData = await infoRes.json();
-
   if (!infoRes.ok || (infoData?.error?.code && infoData.error.code !== 'ok')) {
     const normalized = extractTikTokError(infoData, infoRes.status);
-    const err = new Error(normalized.message);
-    err.payload = normalized;
-    throw err;
+    throw new Error(normalized.message);
   }
-
   return infoData?.data || {};
 }
 
-async function uploadImageToFal(image, falKey, index) {
-  let buffer;
-
-  if (typeof image === 'string' && image.startsWith('data:')) {
-    const base64 = image.replace(/^data:image\/\w+;base64,/, '');
-    buffer = Buffer.from(base64, 'base64');
-  } else if (typeof image === 'string' && image.startsWith('http')) {
-    const r = await fetch(image);
-    if (!r.ok) throw new Error(`Failed to fetch image ${index + 1}: ${r.status}`);
-    buffer = Buffer.from(await r.arrayBuffer());
-  } else {
-    throw new Error(`Image ${index + 1} is not a valid base64 or URL`);
-  }
-
-  const falUpload = await fetch('https://rest.alpha.fal.ai/storage/upload/initiate', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Key ${falKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      content_type: 'image/jpeg',
-      file_name: `scheduled_slide_${index}.jpg`,
-    }),
-  });
-
-  const falData = await falUpload.json();
-
-  if (!falData.upload_url || !falData.file_url) {
-    throw new Error(`FAL storage initiate failed for image ${index + 1}`);
-  }
-
-  const putRes = await fetch(falData.upload_url, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'image/jpeg' },
-    body: buffer,
-  });
-
-  if (!putRes.ok) {
-    throw new Error(`FAL upload failed for image ${index + 1}`);
-  }
-
-  return falData.file_url;
-}
-
 async function postToTikTok(job) {
-  const {
-    accountToken,
-    images,
-    caption,
-    posting_mode,
-  } = job;
+  const { accountToken, images, caption, posting_mode } = job;
 
   if (!accountToken) throw new Error('No TikTok token for this account');
   if (!images?.length) throw new Error('No images in job');
 
-  const falKey = process.env.FAL_KEY;
-  if (!falKey) throw new Error('Missing FAL_KEY in environment');
+  const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!blobToken) throw new Error('Missing BLOB_READ_WRITE_TOKEN in environment');
 
   const isLive = posting_mode === 'live';
   const cleanTitle = normalizeTitle(caption);
   const cleanDescription = normalizeDescription(caption);
 
+  // Upload all images to Vercel Blob, get serve URLs via verified domain
   const photoUrls = [];
+  const uploadedIds = [];
   for (let i = 0; i < images.length; i++) {
-    const fileUrl = await uploadImageToFal(images[i], falKey, i);
-    photoUrls.push(fileUrl);
+    const fileId = `cron-${Date.now()}-${i}`;
+    const serveUrl = await uploadToBlob(images[i], fileId, blobToken);
+    photoUrls.push(serveUrl);
+    uploadedIds.push(fileId);
+    console.log(`[cron] uploaded slide ${i + 1}: ${serveUrl}`);
   }
 
-  const postInfo = {
-    title: cleanTitle,
-    description: cleanDescription,
-  };
+  const postInfo = { title: cleanTitle, description: cleanDescription };
 
   if (isLive) {
     const creatorInfo = await getCreatorInfo(accountToken);
     const privacyOptions = creatorInfo?.privacy_level_options || [];
-
     postInfo.privacy_level = privacyOptions.includes('PUBLIC_TO_EVERYONE')
       ? 'PUBLIC_TO_EVERYONE'
       : (privacyOptions[0] || 'SELF_ONLY');
-
     postInfo.disable_comment = false;
     postInfo.auto_add_music = true;
   }
@@ -233,6 +207,8 @@ async function postToTikTok(job) {
     },
   };
 
+  console.log('[cron] posting mode:', posting_mode, '| images:', photoUrls.length);
+
   const initRes = await fetch('https://open.tiktokapis.com/v2/post/publish/content/init/', {
     method: 'POST',
     headers: {
@@ -242,7 +218,12 @@ async function postToTikTok(job) {
     body: JSON.stringify(initPayload),
   });
 
-  const initData = await initRes.json();
+  const initText = await initRes.text();
+  let initData;
+  try { initData = JSON.parse(initText); }
+  catch(e) { throw new Error('TikTok non-JSON: ' + initText.slice(0, 200)); }
+
+  console.log('[cron] TikTok response:', JSON.stringify(initData));
 
   if (!initRes.ok || (initData?.error?.code && initData.error.code !== 'ok')) {
     const normalized = extractTikTokError(initData, initRes.status);
@@ -250,10 +231,27 @@ async function postToTikTok(job) {
     throw new Error(normalized.message + extra);
   }
 
-  return {
-    publish_id: initData?.data?.publish_id || null,
-    post_mode: initPayload.post_mode,
-  };
+  // Blobs auto-cleanup after 10 mins — TikTok needs time to pull them
+  setTimeout(async () => {
+    for (const fileId of uploadedIds) {
+      try {
+        const listRes = await fetch(`https://blob.vercel-storage.com?prefix=slides/${fileId}.jpg`, {
+          headers: { 'Authorization': `Bearer ${blobToken}`, 'x-api-version': '7' }
+        });
+        const listData = await listRes.json();
+        const blobUrl = listData?.blobs?.[0]?.url;
+        if (blobUrl) {
+          await fetch('https://blob.vercel-storage.com/delete', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${blobToken}`, 'Content-Type': 'application/json', 'x-api-version': '7' },
+            body: JSON.stringify({ urls: [blobUrl] }),
+          });
+        }
+      } catch(e) { console.log('[cron] blob cleanup failed:', e.message); }
+    }
+  }, 600000);
+
+  return { publish_id: initData?.data?.publish_id || null, post_mode: initPayload.post_mode };
 }
 
 function sleep(ms) {
