@@ -4,14 +4,8 @@
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "functions": {
-    "api/fal.js": { "maxDuration": 60 },
+    "api/fal.js":         { "maxDuration": 60 },
     "api/tiktok-auth.js": { "maxDuration": 60 },
-    "api/cron.js": { "maxDuration": 60 }
-  },
-  "crons": [
-    {
-      "path": "/api/cron",
-      "schedule": "0 9 * * *"
-    }
-  ]
+    "api/cron.js":        { "maxDuration": 60 }
+  }
 }
