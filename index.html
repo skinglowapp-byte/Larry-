@@ -413,10 +413,10 @@
         <input type="text" id="app-audience" placeholder="e.g. UK renters aged 20-35 who can't renovate" value="Women aged 18-40 with sensitive, eczema-prone or rosacea skin who are overwhelmed by skincare and scared of reactions" />
       </div>
       <div class="card">
-        <div class="card-title">Image architecture (locked across all 6 slides)</div>
-        <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6;">This is the subject description that stays <em>identical</em> in every prompt. Only the style changes per slide.</div>
-        <label>Locked architecture description</label>
-        <textarea id="arch-desc" rows="5">extreme macro close-up portrait of a woman in her late 20s, hyperrealistic, ultra-detailed skin texture, visible large pores, fine peach fuzz facial hair, natural sebum and oily sheen on forehead cheeks and nose, natural imperfections, blemishes, subtle freckles, photorealistic, cinematic macro photography, shot on Arri Alexa 65, 8k resolution, raw photo, no makeup, natural soft window light with soft shadows, centre-framed looking directly at camera, shallow depth of field background blurred, portrait orientation 9:16</textarea>
+        <div class="card-title">Character description (used in face/selfie slides)</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6;">Describe the person who appears in selfie and close-up slides. Keep it simple — hair, eyes, skin tone, age. Product and app slides generate independently.</div>
+        <label>Character description</label>
+        <textarea id="arch-desc" rows="3">woman in her late 20s, medium skin tone, natural brown hair, hazel eyes, slim build, not a model, looks like a real person</textarea>
         <label>"Before" slide extras (signs of life)</label>
         <input type="text" id="before-extras" value="a half-used tube of cream on the bathroom counter, a glass of water nearby, slight redness visible on cheeks and nose" />
       </div>
@@ -438,7 +438,12 @@
       <div class="formula-box">
         <div class="f-label">Proven winning formula</div>
         <div class="f-text">
-          <span class="f-highlight">[Specific time period]</span> + <span class="f-highlight">[specific embarrassing behaviour]</span> + <span class="f-highlight">[unexpected real person]</span> + <span class="f-highlight">[open loop]</span>
+          <span class="f-highlight">[time + embarrassing behaviour]</span> + <span class="f-highlight">[person you had conflict/dependency with]</span> + <span class="f-highlight">[showed them AI / told you something]</span> + <span class="f-highlight">[open loop]</span>
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:rgba(245,242,236,0.5);line-height:1.7;">
+          ✓ "I spent 6 months avoiding mirrors because of my rosacea until a random girl at Sephora told me about this"<br>
+          ✓ "I wasted £300 on products that burned my skin until my flatmate told me to stop and showed me this"<br>
+          ✗ "See what AI recommended for my eczema" — no conflict, no human, no story
         </div>
       </div>
       <div class="card">
@@ -1088,34 +1093,32 @@ async function generateSlideshow() {
     const appName  = document.getElementById('app-name')?.value || 'Aureya';
     const acc2     = selectedAccountIndex !== null ? connectedAccounts[selectedAccountIndex] : null;
     const charDesc = acc2?.desc || 'woman in her late 20s with sensitive skin';
-    const planPrompt = `Plan a 6-slide TikTok skincare story slideshow.
+    const planPrompt = `Plan a 6-slide TikTok skincare story slideshow that follows this proven formula:
+[time + embarrassing behaviour] → [person notices/says something] → [they showed them the app] → [transformation]
 
 Hook: "${hook}"
 App: ${appName} — AI skincare for sensitive/eczema/rosacea skin
 Character: ${charDesc}
 
-CRITICAL INSIGHT: TikTok data shows most viewers leave before slide 4. Compress the payoff.
-The product/resolution must be visible by slide 3 — not slide 5 or 6.
+CRITICAL: Most viewers leave before slide 4. The emotional payoff must land by slide 3.
 
-STORY STRUCTURE:
-- Slide 1: Hook moment — raw, painful, skin problem visible. Text = exact hook.
-- Slide 2: Emotional lowest point — specific shame/hiding moment. Very short text, under 2 seconds.
-- Slide 3: Discovery AND early result — finds the solution AND hints at change. Text teases outcome.
-- Slide 4: Visible progress — real improvement, same setting as slide 1 for contrast.
-- Slide 5: More progress — different setting, skin clearly better.
-- Slide 6: After state — confident, ordinary setting. Text closes the loop.
+STORY BEATS:
+- Slide 1: The hook moment — show the raw skin problem. Text = exact hook.
+- Slide 2: The lowest point — the specific embarrassing behaviour from the hook (avoiding mirrors, cancelling plans, hiding skin). Raw, emotional. Short text.
+- Slide 3: The turning point — the person from the hook (flatmate, coworker, stranger) shows them the app OR the moment they first try it. Text creates hope.
+- Slide 4: Early result — skin starting to change. Product or skin close-up. Short punchy text.
+- Slide 5: Real progress — face selfie, same energy as slide 1 but clearly better.
+- Slide 6: After — calm confident skin, close-up or selfie. Text closes the loop.
 
-SCENE RULES:
-- ALL scenes must be INDOORS — bedroom, bathroom, kitchen, sofa, office, car only
-- NO golden hour, NO outdoor parks, NO cinematic lighting
-- Every scene must have harsh or unflattering real lighting
-- Scenes must feel like a real person's home
+SCENE TYPES available: selfie, skin_close, app, product, mirror, lifestyle
+GOOD MIX: slides 1+5 = selfie, slides 2+6 = skin_close, slide 3 = app or lifestyle, slide 4 = product or skin_close
+Do NOT put the app on slide 3 if the story beat is more emotional — use lifestyle or mirror instead, then put app on slide 4.
 
-SCENE TYPES: selfie, mirror, lifestyle, skin_close, app, product
 Slide 1 text must be EXACTLY: "${hook}"
+All other text: 3-8 words, conversational, no hashtags.
 
 Return ONLY a JSON array of exactly 6 objects:
-[{"slide":1,"type":"selfie","scene":"indoor location with outfit and harsh lighting","skin_state":"skin condition at this stage","text":"story text 3-8 words"},...]`;
+[{"slide":1,"type":"selfie","scene":"brief scene description","skin_state":"skin condition at this stage","text":"story text"},...]`;
 
     const planRes  = await fetch('/api/claude', {
       method: 'POST',
@@ -1294,11 +1297,19 @@ function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex) {
   } else if (type === 'mirror') {
     prompt = `Real young woman, ${archClean}, ${outfit}, ${skin}, looking at bathroom mirror with slight frustration or contemplation, morning routine, candid moment. Authentic UGC phone photo, no filters, no beauty mode, raw JPEG. ${frame}. ${env}. ${light}. ${cam}.`;
   } else if (type === 'skin_close') {
-    prompt = `Extreme macro face close-up, ${archClean}, ${skin}, face filling most of frame, looking slightly down or away, no makeup, visible pores, fine peach fuzz, natural sebum, every imperfection visible. Authentic UGC documentary photo, raw unedited skin, zero retouching. ${light}. ${cam}.`;
+    prompt = `Extreme macro close-up of a real woman's face, ${skin}, visible pores, fine peach fuzz, natural sebum, redness or irritation visible, every skin imperfection in detail. No makeup. Face filling most of frame. Authentic documentary phone photo, raw unedited skin, zero retouching, no beauty filter. ${light}. ${cam}.`;
   } else if (type === 'app') {
-    prompt = `Real young woman, ${archClean}, ${outfit}, ${skin}, holding iPhone showing a skincare app on screen, looking at phone with curiosity or hope, phone screen slightly reflective. Authentic UGC phone photo, no filters, no beauty mode, raw JPEG. ${frame}. ${env}. ${light}. ${cam}.`;
+    const appName = document.getElementById('app-name')?.value || 'Aureya';
+    // Alternate between dashboard view and routine view based on slide index
+    const appVariant = slideIndex % 2 === 0 ? 'dashboard' : 'routine';
+    if (appVariant === 'dashboard') {
+      prompt = `Close-up photo of an iPhone being held in a hand, screen showing a skincare app called "${appName} BarrierCare". The app screen has a soft cream and blush pink colour scheme. At the top is a water droplet shield logo and the text "Aureya BarrierCare". Below is a skin analysis result showing a face scan with a skin health score, labels like "Barrier Strength", "Hydration", "Sensitivity" with progress bars. Clean minimal UI, calm pastel tones. Phone slightly tilted, screen bright and readable. Real home background slightly blurred — wooden table or sofa. Natural window light. Authentic UGC phone photo style, slightly off-angle.`;
+    } else {
+      prompt = `Close-up photo of an iPhone being held in a hand, screen showing a skincare app called "${appName} BarrierCare". The app screen has a soft cream and blush pink colour scheme. The screen shows "Your Routine" with a list of 3-4 recommended products for sensitive/eczema skin — each product has a small thumbnail, name like "La Roche-Posay Toleriane" or "CeraVe Moisturising Cream", and a green "Safe for your skin" badge. Clean minimal UI. Phone slightly tilted, screen bright and readable. Real home background slightly blurred — bathroom counter or bedside table. Natural window light. Authentic UGC phone photo style, slightly off-angle.`;
+    }
   } else if (type === 'product') {
-    prompt = `Real young woman, ${archClean}, ${outfit}, ${skin}, holding one or two skincare product bottles, uncertain or curious expression, reading label. Authentic UGC phone photo, no filters, no beauty mode, raw JPEG. ${frame}. ${env}. ${light}. ${cam}.`;
+    // Product shot — no person, focus on the products themselves
+    prompt = `Close-up photo of skincare products on a bathroom counter or shelf — moisturiser, serum, or cream bottles. Real home setting, slightly cluttered counter, tile or wood visible in background. Natural window light from the side, soft shadows. Authentic phone camera photo, slightly off-angle, casual framing, no studio lighting, no white background. Products are the main focus.`;
   } else if (type === 'lifestyle') {
     prompt = `Real young woman, ${archClean}, ${outfit}, ${skin}, ${scene || 'sitting or standing naturally indoors, not posed, thoughtful expression'}. Authentic UGC candid phone photo, no filters, no beauty mode, raw JPEG. ${frame}. ${env}. ${light}. ${cam}.`;
   } else {
