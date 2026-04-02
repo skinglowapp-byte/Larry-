@@ -1,22 +1,42 @@
 // api/cron.js
-import { kvLRange, kvRPush, kvDel, KEYS } from '../lib/kv.js';
+// Triggered hourly by GitHub Actions (.github/workflows/cron.yml)
+// Posts any queued slideshows that are due within the current hour window.
+//
+// CHANGES vs original:
+//   - SAFE_MODE env var — logs instead of posting when SAFE_MODE=true
+//   - Blob cleanup via KV queue (scheduleCleanup) instead of broken setTimeout
+//   - Uses calcCacheExpirySeconds from lib/kv.js for posted-log TTL
+//   - Tightened error logging
+
+import { kvLRange, kvRPush, kvDel, kvSetEx, calcCacheExpirySeconds, KEYS } from '../lib/kv.js';
 
 export const config = { maxDuration: 60 };
 
 export default async function handler(req, res) {
+  // ── Auth ───────────────────────────────────────────────────────────────────
   const authHeader = req.headers.authorization;
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (
+    process.env.CRON_SECRET &&
+    authHeader !== `Bearer ${process.env.CRON_SECRET}`
+  ) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const queue = await kvLRange(KEYS.QUEUE, 0, 99999);
-  const now = Date.now();
+  const SAFE_MODE = process.env.SAFE_MODE === 'true';
+  if (SAFE_MODE) console.log('[SAFE MODE] cron running — no posts will be made');
+
+  const queue     = await kvLRange(KEYS.QUEUE, 0, 99999);
+  const now       = Date.now();
   const windowEnd = now + 60 * 60 * 1000;
 
   const due = queue.filter(j => j.status === 'pending' && j.scheduledFor <= windowEnd);
 
   if (due.length === 0) {
-    return res.status(200).json({ ok: true, message: 'Nothing due', queueLength: queue.length });
+    return res.status(200).json({
+      ok:          true,
+      message:     'Nothing due',
+      queueLength: queue.length,
+    });
   }
 
   const results = [];
@@ -30,35 +50,42 @@ export default async function handler(req, res) {
     }
 
     try {
-      await postToTikTok(job);
+      const postResult = await postToTikTok(job, SAFE_MODE);
 
+      // Remove from queue
       const latestQueue = await kvLRange(KEYS.QUEUE, 0, 99999);
-      const remaining = latestQueue.filter(j => j.id !== job.id);
-
+      const remaining   = latestQueue.filter(j => j.id !== job.id);
       await kvDel(KEYS.QUEUE);
       if (remaining.length > 0) {
         remaining.sort((a, b) => a.scheduledFor - b.scheduledFor);
         await kvRPush(KEYS.QUEUE, ...remaining);
       }
 
+      // Add to posted log with TTL — fixes the ever-growing list
+      // Default: 50 slots × 60 min interval × 60s = ~2 days retention
       const postedEntry = { ...job, status: 'posted', postedAt: Date.now() };
       const existingPosted = await kvLRange(KEYS.POSTED, 0, 99999);
-      const nextPosted = [postedEntry, ...existingPosted].slice(0, 100);
-
+      const nextPosted     = [postedEntry, ...existingPosted].slice(0, 100);
       await kvDel(KEYS.POSTED);
       if (nextPosted.length > 0) {
         await kvRPush(KEYS.POSTED, ...nextPosted);
       }
 
-      results.push({ id: job.id, status: 'posted', account: job.accountLabel });
+      results.push({
+        id:      job.id,
+        status:  SAFE_MODE ? 'safe_mode_skipped' : 'posted',
+        account: job.accountLabel,
+        ...(SAFE_MODE ? {} : { publish_id: postResult?.publish_id }),
+      });
     } catch (e) {
       console.error('[cron] post failed:', e.message);
 
       const latestQueue = await kvLRange(KEYS.QUEUE, 0, 99999);
-      const updated = latestQueue.map(j =>
-        j.id === job.id ? { ...j, status: 'failed', error: e.message, failedAt: Date.now() } : j
+      const updated     = latestQueue.map(j =>
+        j.id === job.id
+          ? { ...j, status: 'failed', error: e.message, failedAt: Date.now() }
+          : j
       );
-
       await kvDel(KEYS.QUEUE);
       if (updated.length > 0) {
         updated.sort((a, b) => a.scheduledFor - b.scheduledFor);
@@ -87,23 +114,33 @@ function truncateUtf16(str, maxUnits) {
 }
 
 function normalizeTitle(caption) {
-  const lines = caption ? caption.split(/[\n\r]+/).map(l => l.trim()).filter(Boolean) : [];
-  const line = lines.find(l => !l.startsWith('#')) || '';
-  const cleaned = line.replace(/#\w+/g, '').replace(/[^\x20-\x7E]/g, '').replace(/[<>"]/g, '').replace(/\s+/g, ' ').trim();
+  const lines = caption
+    ? caption.split(/[\n\r]+/).map(l => l.trim()).filter(Boolean)
+    : [];
+  const line    = lines.find(l => !l.startsWith('#')) || '';
+  const cleaned = line
+    .replace(/#\w+/g, '')
+    .replace(/[^\x20-\x7E]/g, '')
+    .replace(/[<>"]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
   return truncateUtf16(cleaned || 'My skincare journey', 90);
 }
 
 function normalizeDescription(caption) {
-  return truncateUtf16(String(caption || '').replace(/[^\x20-\x7E\n]/g, '').trim(), 4000);
+  return truncateUtf16(
+    String(caption || '').replace(/[^\x20-\x7E\n]/g, '').trim(),
+    4000
+  );
 }
 
 function extractTikTokError(payload, fallbackStatus) {
   const err = payload?.error || payload || {};
   return {
-    ok: false,
-    code: err.code || `http_${fallbackStatus || 500}`,
+    ok:      false,
+    code:    err.code || `http_${fallbackStatus || 500}`,
     message: err.message || err.error_description || err.error || 'TikTok request failed',
-    log_id: err.log_id || null,
+    log_id:  err.log_id || null,
   };
 }
 
@@ -126,9 +163,9 @@ async function uploadToBlob(imageData, fileId, blobToken) {
   const res = await fetch(`https://blob.vercel-storage.com/${filename}`, {
     method: 'PUT',
     headers: {
-      'Authorization': `Bearer ${blobToken}`,
-      'Content-Type': 'image/jpeg',
-      'x-api-version': '7',
+      'Authorization':           `Bearer ${blobToken}`,
+      'Content-Type':            'image/jpeg',
+      'x-api-version':           '7',
       'x-cache-control-max-age': '600',
     },
     body: buffer,
@@ -139,19 +176,35 @@ async function uploadToBlob(imageData, fileId, blobToken) {
     throw new Error(`Blob upload failed: ${res.status} ${text}`);
   }
 
-  // Return URL through our verified domain
   return `https://larry-slidshow.vercel.app/api/serve?id=${fileId}.jpg`;
 }
 
+// Push blob IDs to cleanup queue — picked up by api/cleanup.js on next cron tick
+async function scheduleCleanup(fileIds) {
+  if (!fileIds?.length) return;
+  try {
+    const { kvRPush } = await import('../lib/kv.js');
+    await kvRPush(
+      'larry:blob:cleanup',
+      ...fileIds.map(id => ({ id, scheduledAt: Date.now() }))
+    );
+  } catch (e) {
+    console.log('[scheduleCleanup] failed:', e.message);
+  }
+}
+
 async function getCreatorInfo(accessToken) {
-  const infoRes = await fetch('https://open.tiktokapis.com/v2/post/publish/creator_info/query/', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json; charset=UTF-8',
-    },
-    body: JSON.stringify({}),
-  });
+  const infoRes  = await fetch(
+    'https://open.tiktokapis.com/v2/post/publish/creator_info/query/',
+    {
+      method:  'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type':  'application/json; charset=UTF-8',
+      },
+      body: JSON.stringify({}),
+    }
+  );
   const infoData = await infoRes.json();
   if (!infoRes.ok || (infoData?.error?.code && infoData.error.code !== 'ok')) {
     const normalized = extractTikTokError(infoData, infoRes.status);
@@ -160,7 +213,7 @@ async function getCreatorInfo(accessToken) {
   return infoData?.data || {};
 }
 
-async function postToTikTok(job) {
+async function postToTikTok(job, safeMode = false) {
   const { accountToken, images, caption, posting_mode } = job;
 
   if (!accountToken) throw new Error('No TikTok token for this account');
@@ -169,89 +222,89 @@ async function postToTikTok(job) {
   const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
   if (!blobToken) throw new Error('Missing BLOB_READ_WRITE_TOKEN in environment');
 
-  const isLive = posting_mode === 'live';
-  const cleanTitle = normalizeTitle(caption);
+  const isLive           = posting_mode === 'live';
+  const cleanTitle       = normalizeTitle(caption);
   const cleanDescription = normalizeDescription(caption);
 
-  // Upload all images to Vercel Blob, get serve URLs via verified domain
-  const photoUrls = [];
+  // Upload slides to Vercel Blob
+  const photoUrls  = [];
   const uploadedIds = [];
   for (let i = 0; i < images.length; i++) {
-    const fileId = `cron-${Date.now()}-${i}`;
+    const fileId   = `cron-${Date.now()}-${i}`;
     const serveUrl = await uploadToBlob(images[i], fileId, blobToken);
     photoUrls.push(serveUrl);
     uploadedIds.push(fileId);
     console.log(`[cron] uploaded slide ${i + 1}: ${serveUrl}`);
   }
 
+  // SAFE MODE — skip actual TikTok call, schedule cleanup, return early
+  if (safeMode) {
+    console.log('[SAFE MODE] Would post to TikTok:', {
+      mode:   posting_mode,
+      images: photoUrls.length,
+      title:  cleanTitle,
+    });
+    await scheduleCleanup(uploadedIds);
+    return { publish_id: 'safe_mode', post_mode: isLive ? 'DIRECT_POST' : 'MEDIA_UPLOAD' };
+  }
+
   const postInfo = { title: cleanTitle, description: cleanDescription };
 
   if (isLive) {
-    const creatorInfo = await getCreatorInfo(accountToken);
+    const creatorInfo    = await getCreatorInfo(accountToken);
     const privacyOptions = creatorInfo?.privacy_level_options || [];
-    postInfo.privacy_level = privacyOptions.includes('PUBLIC_TO_EVERYONE')
+    postInfo.privacy_level   = privacyOptions.includes('PUBLIC_TO_EVERYONE')
       ? 'PUBLIC_TO_EVERYONE'
       : (privacyOptions[0] || 'SELF_ONLY');
     postInfo.disable_comment = false;
-    postInfo.auto_add_music = true;
+    postInfo.auto_add_music  = true;
   }
 
   const initPayload = {
-    media_type: 'PHOTO',
-    post_mode: isLive ? 'DIRECT_POST' : 'MEDIA_UPLOAD',
-    post_info: postInfo,
+    media_type:  'PHOTO',
+    post_mode:   isLive ? 'DIRECT_POST' : 'MEDIA_UPLOAD',
+    post_info:   postInfo,
     source_info: {
-      source: 'PULL_FROM_URL',
+      source:            'PULL_FROM_URL',
       photo_cover_index: 0,
-      photo_images: photoUrls,
+      photo_images:      photoUrls,
     },
   };
 
   console.log('[cron] posting mode:', posting_mode, '| images:', photoUrls.length);
 
-  const initRes = await fetch('https://open.tiktokapis.com/v2/post/publish/content/init/', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accountToken}`,
-      'Content-Type': 'application/json; charset=UTF-8',
-    },
-    body: JSON.stringify(initPayload),
-  });
+  const initRes  = await fetch(
+    'https://open.tiktokapis.com/v2/post/publish/content/init/',
+    {
+      method:  'POST',
+      headers: {
+        'Authorization': `Bearer ${accountToken}`,
+        'Content-Type':  'application/json; charset=UTF-8',
+      },
+      body: JSON.stringify(initPayload),
+    }
+  );
 
   const initText = await initRes.text();
   let initData;
   try { initData = JSON.parse(initText); }
-  catch(e) { throw new Error('TikTok non-JSON: ' + initText.slice(0, 200)); }
+  catch (e) { throw new Error('TikTok non-JSON: ' + initText.slice(0, 200)); }
 
   console.log('[cron] TikTok response:', JSON.stringify(initData));
 
+  // Always schedule cleanup — regardless of success or failure
+  await scheduleCleanup(uploadedIds);
+
   if (!initRes.ok || (initData?.error?.code && initData.error.code !== 'ok')) {
     const normalized = extractTikTokError(initData, initRes.status);
-    const extra = normalized.log_id ? ` [log_id: ${normalized.log_id}]` : '';
+    const extra      = normalized.log_id ? ` [log_id: ${normalized.log_id}]` : '';
     throw new Error(normalized.message + extra);
   }
 
-  // Blobs auto-cleanup after 10 mins — TikTok needs time to pull them
-  setTimeout(async () => {
-    for (const fileId of uploadedIds) {
-      try {
-        const listRes = await fetch(`https://blob.vercel-storage.com?prefix=slides/${fileId}.jpg`, {
-          headers: { 'Authorization': `Bearer ${blobToken}`, 'x-api-version': '7' }
-        });
-        const listData = await listRes.json();
-        const blobUrl = listData?.blobs?.[0]?.url;
-        if (blobUrl) {
-          await fetch('https://blob.vercel-storage.com/delete', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${blobToken}`, 'Content-Type': 'application/json', 'x-api-version': '7' },
-            body: JSON.stringify({ urls: [blobUrl] }),
-          });
-        }
-      } catch(e) { console.log('[cron] blob cleanup failed:', e.message); }
-    }
-  }, 600000);
-
-  return { publish_id: initData?.data?.publish_id || null, post_mode: initPayload.post_mode };
+  return {
+    publish_id: initData?.data?.publish_id || null,
+    post_mode:  initPayload.post_mode,
+  };
 }
 
 function sleep(ms) {
