@@ -842,7 +842,7 @@ async function generateHooks() {
   const prompt = `You write TikTok hooks for a skincare app called ${appName}.
 The audience: ${audience}.
 
-Here are 5 hooks that got 100K–600K views. Write hooks that sound exactly like these — same energy, same specificity, same casual tone:
+Here are hooks that consistently hit 100K–600K views in the skincare niche. Study the exact formula:
 
 1. "I spent 6 months avoiding mirrors because of my rosacea until a random girl at Sephora told me about this"
 2. "I turned down a girls holiday because I was too embarrassed about my skin until my flatmate showed me what she'd been using"
@@ -850,13 +850,16 @@ Here are 5 hooks that got 100K–600K views. Write hooks that sound exactly like
 4. "I cancelled a first date three times because my skin was flaring so badly until a coworker noticed and sent me a link"
 5. "I spent £300 on products that made my rosacea worse until a stranger at the pharmacy told me to stop"
 
-Notice what makes them work:
-- A specific time period or amount (6 months, £300, two years, three times)
-- A specific embarrassing thing the person was doing because of their skin
-- A real ordinary person who helped — not a doctor, not an ad, not a brand
-- Ends on an open loop — the viewer has to keep watching to find out what it was
+The formula that makes these work — every element is required:
+- [Specific time + embarrassing behaviour caused by skin] — the longer the person suffered the better
+- [A real ordinary person notices or says something] — NOT a doctor, NOT an ad, NOT a brand. A flatmate, coworker, stranger, mum, boyfriend, neighbour
+- [Open loop] — viewer must keep watching to find out what the person said or showed them
 
-Write ${count} new hooks in the same style. Vary the embarrassing behaviour, the time period, the person who helped, and the setting. Keep them under 25 words. Natural conversational English — sounds like a text message not a marketing brief.
+The hook creates a tiny story in your head before you even swipe. You picture the person's face. You feel the embarrassment. Then you need to know what happened.
+
+Hooks that flop say things like "I tried everything" or "see what AI recommended" — no conflict, no human, no story.
+
+Write ${count} new hooks in the same style. Vary: the behaviour (avoiding something, hiding something, cancelling something, spending money on the wrong thing), the time period, the person (flatmate, neighbour, mum, sister, coworker, stranger at a specific place). Keep them under 25 words. Natural conversational English — sounds like a voice note not a caption.
 
 Return ONLY a JSON array of strings. No preamble, no markdown.`;
 
@@ -977,9 +980,9 @@ function buildRVBody(prompt, charUrl, hasLoRA, loraPath, loraTrigger, slideIndex
 
   const input = {
     prompt:                finalPrompt,
-    image_size:            'portrait_9_16',
+    image_size:            'portrait_16_9',
     num_inference_steps:   35,
-    guidance_scale:        3.5,
+    guidance_scale:        2.5,
     num_images:            1,
     output_format:         'jpeg',
     enable_safety_checker: false,
@@ -1036,7 +1039,7 @@ async function generateSlide(i, hook, arch, falKey, acc, charUrl, hasLoRA) {
           prompt:                fullPrompt,
           strength:              0.3,
           num_inference_steps:   20,
-          guidance_scale:        3.5,
+          guidance_scale:        2.5,
           output_format:         'jpeg',
           enable_safety_checker: false,
         }, falKey2);
@@ -1210,140 +1213,98 @@ async function runCrystalUpscaler(imageUrl, falKey) {
   return data?.images?.[0]?.url || data?.images?.[0] || null;
 }
 
-// ─── FLUX.2 JSON PROMPT BUILDER ───────────────────────────────────────────────
-// FLUX.2 parses structured JSON prompts natively — subject/style/lighting/camera
-// gives far better prompt adherence than free text for photorealistic UGC output.
+// ─── FLUX.2 PLAIN TEXT PROMPT BUILDER ────────────────────────────────────────
+// FLUX.2 prompt format per official docs: Subject → Action → Style → Context
+// JSON structured prompts are a playground UI feature only — the API takes plain strings.
 function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex) {
   const type      = planEntry?.type      || 'selfie';
   const scene     = planEntry?.scene     || '';
   const skinState = planEntry?.skin_state || styleDesc;
   const archClean = (arch || '').replace(/\([^)]+:\d+(\.\d+)?\)/g, '').replace(/\s+/g, ' ').trim();
 
-  // Per-slide camera configs — escalating from bad to acceptable to match story arc
-  const cameraConfigs = [
-    { device: 'iPhone 13 front camera', lens: '26mm equivalent', f_stop: 'f/2.2', iso: 'ISO 1600', notes: 'slight barrel distortion, grainy sensor, auto-exposure blown slightly' },
-    { device: 'Samsung Galaxy S21 front camera', lens: '26mm equivalent', f_stop: 'f/2.0', iso: 'ISO 2000', notes: 'slight lens distortion, auto-HDR off, washed out highlights' },
-    { device: 'iPhone 12 front camera', lens: '23mm equivalent', f_stop: 'f/2.2', iso: 'ISO 1250', notes: 'jpeg compression artefacts, unedited, motion soft' },
-    { device: 'iPhone front camera handheld', lens: '26mm', f_stop: 'f/2.2', iso: 'ISO 800', notes: 'slightly underexposed, camera shake, no stabilisation' },
-    { device: 'smartphone front camera', lens: 'wide angle', f_stop: 'f/2.0', iso: 'ISO 640', notes: 'natural sensor grain, casual framing, no beauty mode' },
-    { device: 'smartphone front camera', lens: '26mm', f_stop: 'f/1.8', iso: 'ISO 500', notes: 'natural light, slight overexposure, no filters applied' },
+  // Per-slide camera — story arc: bad phone cam early → slightly better later
+  const cameras = [
+    'iPhone 13 front camera, grainy sensor, auto-exposure overblown, slight barrel distortion, unedited JPEG',
+    'Samsung Galaxy front camera, slight lens distortion, auto-HDR off, washed out, raw',
+    'iPhone 12 front camera, JPEG compression artefacts, unedited, motion slightly soft',
+    'iPhone front camera handheld, slightly underexposed, camera shake, no stabilisation',
+    'smartphone front camera, natural sensor grain, casual framing, no beauty mode',
+    'smartphone front camera, natural light, slight overexposure, no filters applied',
   ];
 
-  // Per-slide lighting — harsh/unflattering early, improving later. Always INDOORS.
-  const lightingConfigs = [
-    { type: 'overhead bathroom LED', quality: 'harsh, unflattering', direction: 'top-down', color_temp: '5000K cool white', notes: 'deep shadows under eyes and nose, slight overexposure on forehead' },
-    { type: 'single bedside lamp', quality: 'dim, warm', direction: 'side', color_temp: '2700K warm yellow', notes: 'underexposed, muddy shadows, no fill, not a photoshoot' },
-    { type: 'window sidelight', quality: 'natural, soft', direction: 'left side', color_temp: '5500K daylight', notes: 'no artificial fill, slight wash on cheek, real home window' },
-    { type: 'mixed overhead indoor', quality: 'flat, unflattering', direction: 'top', color_temp: '4000K with slight green cast', notes: 'no rim light, no key light, ordinary room ceiling light' },
-    { type: 'natural window daylight', quality: 'even, natural', direction: 'front-left', color_temp: '6000K', notes: 'no artificial light, soft shadows, no rim or fill' },
-    { type: 'natural window light', quality: 'gentle, improving', direction: 'front', color_temp: '5500K', notes: 'most flattering of the series but still no beauty lighting' },
+  // Per-slide lighting — harsh/unflattering early, easing later. Always INDOORS.
+  const lightings = [
+    'harsh overhead bathroom LED, deep shadows under eyes, slight overexposure on forehead',
+    'single dim bedside lamp, warm yellow cast, underexposed, muddy shadows',
+    'natural window sidelight from left, no artificial fill, slight wash on cheek',
+    'mixed overhead indoor light, flat unflattering, faint green cast, no rim light',
+    'natural window daylight front-left, even natural exposure, no artificial light',
+    'soft natural window light, most flattering of series but still no beauty lighting',
   ];
 
-  // Per-slide framing — imperfect UGC framing throughout
-  const framingConfigs = [
-    { angle: 'slightly below eye level', composition: 'face and shoulders slightly off-centre, forehead slightly cropped, hand holding phone visible' },
-    { angle: 'eye level', composition: 'waist-up, arm extended awkwardly, head slightly tilted, not posed' },
-    { angle: 'slightly above eye level', composition: 'three-quarter shot, background clutter in frame, slightly off-axis' },
-    { angle: 'slightly below eye level', composition: 'tight face close-up, slightly shaky, brow cut off at top' },
-    { angle: 'eye level', composition: 'medium shot, subject slightly off-centre to left' },
-    { angle: 'eye level', composition: 'shoulder-up, casual, eyes not perfectly centred in frame' },
+  // Per-slide framing
+  const framings = [
+    'face and shoulders slightly off-centre, forehead lightly cropped, hand holding phone visible',
+    'waist-up selfie, arm extended awkwardly, head tilted, unposed',
+    'three-quarter shot, background clutter visible, slightly off-axis',
+    'tight face close-up, slightly shaky, brow cut off at top',
+    'medium shot, subject slightly off-centre to left',
+    'shoulder-up, casual, eyes not perfectly centred in frame',
   ];
 
-  // Per-slide outfits — no styling, real homewear
-  const outfitsByIndex = [
+  const outfits = [
     'oversized grey hoodie, no jewellery, hair unwashed and loose',
-    'old baggy t-shirt, hair in a rough bun, no jewellery',
-    'pyjama top or soft cotton tank, hair loose and unstyled',
-    'plain crew-neck sweatshirt, no accessories, hair tied back loosely',
-    'basic worn t-shirt, hair down and natural with flyaways',
-    'cosy knit jumper or fleece, minimal styling, hair half-up casual',
+    'old baggy t-shirt, hair in rough bun, no jewellery',
+    'pyjama top or cotton tank, hair loose and unstyled',
+    'plain crew-neck sweatshirt, no accessories, hair tied loosely',
+    'basic worn t-shirt, hair down with flyaways',
+    'cosy knit jumper, minimal styling, hair half-up casual',
   ];
 
-  // Per-slide backgrounds — real homes, clutter, no staging
-  const environmentsByIndex = [
+  const environments = [
     'cluttered bathroom counter, toothbrush visible, skincare products scattered, tile grout visible',
     'messy bedroom background, unmade bed, clothes on chair, real lived-in space',
-    'real kitchen, dishes on counter, fridge magnets visible, ordinary domestic space',
+    'real kitchen, dishes on counter, fridge magnets, ordinary domestic space',
     'living room sofa, cushions, TV remote, everyday objects casually placed',
-    'bathroom or bedroom with window, real home, slightly untidy',
+    'bathroom or bedroom, window visible, real home, slightly untidy',
     'car interior or home hallway, coat hooks or steering wheel partially visible',
   ];
 
-  // Per-slide skin realism descriptions — maps to story arc progression
-  const skinProgressionByIndex = [
+  const skinProgress = [
     'skin visibly inflamed, redness and raised patches, raw looking, painful appearance, zero retouching',
     'skin still very irritated, tight dry patches, slight swelling, real distressed skin, no airbrushing',
-    'skin starting to calm slightly, still imperfect, small active spots and uneven tone, no filters',
-    'noticeably improved but still real skin — open pores, minor texture, not perfect, no beauty mode',
+    'skin starting to calm, still imperfect, small active spots and uneven tone, no filters',
+    'noticeably improved but still real skin, open pores, minor texture, not perfect, no beauty mode',
     'clearly calmer skin, healthy texture, real pores and fine lines visible, good but not flawless',
-    'good skin day for a real person — visible pores, natural texture, slight unevenness, no filter',
+    'good skin day for a real person, visible pores, natural texture, slight unevenness, no filter',
   ];
 
-  const cam    = cameraConfigs[slideIndex % cameraConfigs.length];
-  const light  = lightingConfigs[slideIndex % lightingConfigs.length];
-  const frame  = framingConfigs[slideIndex % framingConfigs.length];
-  const outfit = outfitsByIndex[slideIndex % outfitsByIndex.length];
-  const env    = environmentsByIndex[slideIndex % environmentsByIndex.length];
-  const skin   = skinState || skinProgressionByIndex[Math.min(slideIndex, 5)];
+  const cam     = cameras[slideIndex % cameras.length];
+  const light   = lightings[slideIndex % lightings.length];
+  const frame   = framings[slideIndex % framings.length];
+  const outfit  = outfits[slideIndex % outfits.length];
+  const env     = environments[slideIndex % environments.length];
+  const skin    = skinState || skinProgress[Math.min(slideIndex, 5)];
 
-  // Build subject description based on scene type
-  let subjectDesc, subjectPose, subjectPosition;
-  if (type === 'selfie' || type === 'mirror') {
-    subjectDesc   = `real young woman, ${archClean}, no makeup, ${outfit}, ${skin}, authentic UGC creator not a model`;
-    subjectPose   = type === 'mirror' ? 'looking at bathroom mirror, slight frustration or contemplation' : 'holding phone taking selfie, arm extended, candid expression';
-    subjectPosition = frame.composition;
+  // Build the prompt — FLUX.2 preferred order: Subject → Action/pose → Style → Environment/context
+  let prompt = '';
+
+  if (type === 'selfie') {
+    prompt = `Real young woman, ${archClean}, ${outfit}, ${skin}, taking a phone selfie with arm extended, candid unposed expression. Authentic UGC phone photo, no filters, no beauty mode, no airbrushing, raw JPEG. ${frame}. ${env}. ${light}. ${cam}.`;
+  } else if (type === 'mirror') {
+    prompt = `Real young woman, ${archClean}, ${outfit}, ${skin}, looking at bathroom mirror with slight frustration or contemplation, morning routine, candid moment. Authentic UGC phone photo, no filters, no beauty mode, raw JPEG. ${frame}. ${env}. ${light}. ${cam}.`;
   } else if (type === 'skin_close') {
-    subjectDesc   = `extreme macro face close-up, ${archClean}, ${skin}`;
-    subjectPose   = 'face filling frame, looking slightly down or away, no makeup';
-    subjectPosition = 'tight crop, forehead to chin, cheeks to cheeks';
+    prompt = `Extreme macro face close-up, ${archClean}, ${skin}, face filling most of frame, looking slightly down or away, no makeup, visible pores, fine peach fuzz, natural sebum, every imperfection visible. Authentic UGC documentary photo, raw unedited skin, zero retouching. ${light}. ${cam}.`;
   } else if (type === 'app') {
-    subjectDesc   = `real young woman, ${archClean}, ${outfit}, ${skin}, no makeup`;
-    subjectPose   = 'holding iPhone with skincare app on screen, looking at phone with slight curiosity or hope';
-    subjectPosition = frame.composition + ', phone screen slightly visible and reflective';
+    prompt = `Real young woman, ${archClean}, ${outfit}, ${skin}, holding iPhone showing a skincare app on screen, looking at phone with curiosity or hope, phone screen slightly reflective. Authentic UGC phone photo, no filters, no beauty mode, raw JPEG. ${frame}. ${env}. ${light}. ${cam}.`;
   } else if (type === 'product') {
-    subjectDesc   = `real young woman, ${archClean}, ${outfit}, ${skin}, no makeup`;
-    subjectPose   = 'holding one or two skincare product bottles, uncertain or curious expression, reading label';
-    subjectPosition = frame.composition;
+    prompt = `Real young woman, ${archClean}, ${outfit}, ${skin}, holding one or two skincare product bottles, uncertain or curious expression, reading label. Authentic UGC phone photo, no filters, no beauty mode, raw JPEG. ${frame}. ${env}. ${light}. ${cam}.`;
   } else if (type === 'lifestyle') {
-    subjectDesc   = `real young woman, ${archClean}, ${outfit}, ${skin}, no makeup, candid indoor moment`;
-    subjectPose   = scene || 'sitting or standing naturally, not posed, distracted or thoughtful';
-    subjectPosition = frame.composition;
+    prompt = `Real young woman, ${archClean}, ${outfit}, ${skin}, ${scene || 'sitting or standing naturally indoors, not posed, thoughtful expression'}. Authentic UGC candid phone photo, no filters, no beauty mode, raw JPEG. ${frame}. ${env}. ${light}. ${cam}.`;
   } else {
-    subjectDesc   = `real young woman, ${archClean}, ${outfit}, ${skin}, no makeup`;
-    subjectPose   = scene || 'natural candid moment, not posed';
-    subjectPosition = frame.composition;
+    prompt = `Real young woman, ${archClean}, ${outfit}, ${skin}, candid natural indoor moment, unposed. Authentic UGC phone photo, no filters, no beauty mode, raw JPEG. ${frame}. ${env}. ${light}. ${cam}.`;
   }
 
-  // Assemble FLUX.2 JSON prompt object
-  const jsonPrompt = {
-    scene: env,
-    subjects: [{
-      type: 'person',
-      description: subjectDesc,
-      pose: subjectPose,
-      position: subjectPosition,
-    }],
-    style: 'authentic UGC phone photo, documentary photography, zero post-processing, no filters, no beauty mode, no airbrushing, raw JPEG straight from phone, looks like it was filmed for a genuine TikTok not a campaign',
-    color_palette: ['desaturated naturals', 'no warm grade', 'no teal-orange', 'flat ungraded colours straight from sensor'],
-    lighting: {
-      type: light.type,
-      quality: light.quality,
-      direction: light.direction,
-      color_temperature: light.color_temp,
-      notes: light.notes,
-    },
-    camera: {
-      device: cam.device,
-      lens: cam.lens,
-      f_stop: cam.f_stop,
-      iso: cam.iso,
-      angle: frame.angle,
-      notes: cam.notes,
-    },
-  };
-
-  // FLUX.2 receives the JSON as a string — this is its native structured prompt format
-  const prompt = JSON.stringify(jsonPrompt);
   return { prompt };
 }
 
@@ -1875,41 +1836,15 @@ async function generateCharacter() {
   const archDesc   = (document.getElementById('arch-desc')?.value || '').replace(/\([^)]+:\d+(\.\d+)?\)/g, '').replace(/\s+/g, ' ').trim();
   const charDesc   = archDesc || desc;
 
-  // FLUX.2 JSON structured prompt for character reference generation
-  // Goal: get a clean portrait we can recognise as a specific person — natural light, no AI polish
-  const charJsonPrompt = JSON.stringify({
-    scene: 'bright indoor window light, real home or flat, plain wall or simple background, nothing staged',
-    subjects: [{
-      type: 'person',
-      description: `real young woman, ${charDesc}, ${skinDetail}, visible pores and natural skin texture, fine peach fuzz, no makeup, not a model, looks like a real person`,
-      pose: 'looking slightly off-camera at a three-quarter angle, natural relaxed expression, not smiling for a photoshoot',
-      position: 'face and upper shoulders filling most of frame, slight head tilt, natural and unposed',
-    }],
-    style: 'documentary portrait, phone camera aesthetic, zero retouching, no beauty filters, raw JPEG, looks like a candid photo not a headshot session',
-    color_palette: ['natural skin tones', 'no warm grade', 'no colour grading', 'flat natural colours'],
-    lighting: {
-      type: 'natural window light',
-      quality: 'soft, diffused',
-      direction: 'front-left',
-      color_temperature: '5500K daylight',
-      notes: 'no artificial fill, slight soft shadow on one side, clean and natural — best light for character reference',
-    },
-    camera: {
-      device: 'iPhone front camera',
-      lens: '26mm equivalent',
-      f_stop: 'f/2.2',
-      iso: 'ISO 400',
-      angle: 'eye level',
-      notes: 'slight natural sensor grain, no post-processing, unedited JPEG',
-    },
-  });
+  // Plain text prompt for character reference — FLUX.2 format: Subject → Style → Context
+  const charPrompt = `Real young woman, ${charDesc}, ${skinDetail}, visible pores and natural skin texture, fine peach fuzz, no makeup, not a model, looks like a real person. Looking slightly off-camera at a three-quarter angle, natural relaxed expression, not smiling for a photoshoot. Documentary portrait style, phone camera aesthetic, zero retouching, no beauty filters, raw JPEG. Face and upper shoulders filling most of frame, slight head tilt, natural and unposed. Natural window light from front-left, soft and diffused, no artificial fill. iPhone front camera, slight natural sensor grain, no post-processing.`;
 
   try {
     const data = await callFal('fal-ai/flux-2/lora', {
-      prompt:                charJsonPrompt,
+      prompt:                charPrompt,
       image_size:            'portrait_4_3',
       num_inference_steps:   35,
-      guidance_scale:        3.5,
+      guidance_scale:        2.5,
       num_images:            1,
       output_format:         'jpeg',
       enable_safety_checker: false,
@@ -2192,7 +2127,7 @@ Return ONLY JSON: [{"slide":1,"type":"selfie","scene":"...","skin_state":"...","
             bulkLog(`  Slide ${i+1} Pass 2: Realism enhancement...`);
             const realismData = await callFal('fal-ai/flux-2-lora-gallery/realism', {
               image_url: currentUrl, prompt: slidePrompt, strength: 0.3,
-              num_inference_steps: 20, guidance_scale: 3.5, output_format: 'jpeg', enable_safety_checker: false,
+              num_inference_steps: 20, guidance_scale: 2.5, output_format: 'jpeg', enable_safety_checker: false,
             }, getFalKey());
             if (realismData?.images?.[0]?.url) currentUrl = realismData.images[0].url;
           } catch(e2) { bulkLog(`  Slide ${i+1} Pass 2 skipped: ${e2.message}`); }
