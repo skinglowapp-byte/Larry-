@@ -1538,10 +1538,29 @@ async function addToQueue() {
     scheduledFor = slots.find(t => !used.some(u => Math.abs(u - t) < 60000) && t > Date.now()) || (Date.now() + 5 * 60 * 1000);
   }
 
+  // Upload images to Vercel Blob before queuing — base64 strings are too large for Redis (1MB limit)
+  // Store Blob URLs in the job instead, cron.js reads these URLs directly when posting
+  showToast('Uploading slides to queue...', '');
+  let imageUrls = valid;
+  try {
+    const uploadRes = await fetch('/api/upload-slides', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ images: valid }),
+    });
+    if (uploadRes.ok) {
+      const uploadData = await uploadRes.json();
+      if (uploadData.urls?.length) imageUrls = uploadData.urls;
+    }
+  } catch(e) {
+    console.warn('[addToQueue] blob upload failed, using base64 fallback:', e.message);
+    // Fall back to base64 — will work for small sets but may hit Redis limits
+  }
+
   const postingMode = document.getElementById('sched-posting-mode')?.value || 'inbox';
   const job = {
     id:           `job_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
-    images:       valid,
+    images:       imageUrls,
     caption,
     accountIndex,
     accountToken: acc.token,
