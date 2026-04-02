@@ -1110,7 +1110,7 @@ STORY BEATS:
 - Slide 5: Real progress — face selfie, same energy as slide 1 but clearly better.
 - Slide 6: After — calm confident skin, close-up or selfie. Text closes the loop.
 
-SCENE TYPES available: selfie, skin_close, app, product, mirror, lifestyle
+IMPORTANT: Every slide must show ONE person only — no two-person scenes, no "someone else" visible in frame. The story references other people but the camera never shows them. "Bride's mum told me" = show the subject's reaction, not the mum.
 GOOD MIX: slides 1+5 = selfie, slides 2+6 = skin_close, slide 3 = app or lifestyle, slide 4 = product or skin_close
 Do NOT put the app on slide 3 if the story beat is more emotional — use lifestyle or mirror instead, then put app on slide 4.
 
@@ -1311,7 +1311,7 @@ function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex) {
     // Product shot — no person, focus on the products themselves
     prompt = `Close-up photo of skincare products on a bathroom counter or shelf — moisturiser, serum, or cream bottles. Real home setting, slightly cluttered counter, tile or wood visible in background. Natural window light from the side, soft shadows. Authentic phone camera photo, slightly off-angle, casual framing, no studio lighting, no white background. Products are the main focus.`;
   } else if (type === 'lifestyle') {
-    prompt = `Real young woman, ${archClean}, ${outfit}, ${skin}, ${scene || 'sitting or standing naturally indoors, not posed, thoughtful expression'}. Authentic UGC candid phone photo, no filters, no beauty mode, raw JPEG. ${frame}. ${env}. ${light}. ${cam}.`;
+    prompt = `Real young woman, ${archClean}, ${outfit}, ${skin}, ${scene || 'standing or sitting indoors, candid expression, not posed'}. ONE person only in frame — no other people visible. Authentic UGC candid phone photo, no filters, no beauty mode, raw JPEG. ${frame}. ${env}. ${light}. ${cam}.`;
   } else {
     prompt = `Real young woman, ${archClean}, ${outfit}, ${skin}, candid natural indoor moment, unposed. Authentic UGC phone photo, no filters, no beauty mode, raw JPEG. ${frame}. ${env}. ${light}. ${cam}.`;
   }
