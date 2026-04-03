@@ -1449,7 +1449,7 @@ function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex) {
   } else if (type === 'product') {
     prompt = `${qualityPrefix} young woman holding skincare products, ${scene || 'cluttered bathroom counter with products'}, ${outfit}, ${lighting}, looking at products with uncertain or curious expression, slightly imperfect framing, no text, real home not a studio, fully clothed, ${realismAnchor}`;
   } else if (type === 'app') {
-    prompt = `${qualityPrefix} ${archClean}, holding iPhone showing a pink and white skincare app interface, phone held up clearly visible, app screen showing product recommendations and skincare routine cards in soft pastel colours, ${scene}, ${outfit}, ${environment}, person looking at phone with slight smile of relief, phone screen bright and glowing, harsh unflattering indoor light, no makeup, fully clothed, phone screen visible and legible but content abstract, ${realismAnchor}`;
+    prompt = `${qualityPrefix} ${archClean}, holding iPhone showing a skincare app screen, ${scene}, ${framing}, ${outfit}, ${environment}, app screen slightly reflective, candid unaware expression, harsh unflattering indoor light, no makeup, fully clothed, ${realismAnchor}`;
   } else {
     prompt = `${qualityPrefix} ${archClean}, ${styleDesc}, ${framing}, ${environment}, no makeup, authentic real person not a model, fully clothed, ${realismAnchor}`;
   }
