@@ -1299,20 +1299,20 @@ function removeLoRA(index) {
 // Pass 2: Crystal Upscaler (face-specific enhancement)
 
 // FLUX negative prompt — keep minimal, FLUX doesn't use weighted negatives like SD
-const RV_NEGATIVE = 'cartoon, anime, illustration, painting, drawing, cgi, 3d render, airbrushed, smooth plastic skin, perfect flawless skin, perfect symmetrical face, beauty retouch, watermark, text, logo, blurry, deformed, bad anatomy, extra limbs, studio flash, ring light, rim light, key light, fill light, beauty dish, softbox, golden hour, cinematic lighting, cinematic, moody lighting, moody, dramatic lighting, atmospheric lighting, film lighting, warm glow, colour graded, teal orange, warm colour grade, professional photography, perfectly lit, staged, stock photo, flattering light, beauty lighting, soft light, model pose, model face, looking directly at camera, glossy skin, porcelain skin, perfect complexion, magazine photo, fashion photo, high fashion, editorial, perfect composition, centred portrait, symmetrical composition, hyperrealistic rendering, too detailed, overprocessed, HDR, oversaturated, digital art, beautiful lighting, gorgeous lighting';
+const RV_NEGATIVE = 'cartoon, anime, illustration, painting, drawing, cgi, 3d render, airbrushed, smooth plastic skin, perfect flawless skin, perfect symmetrical face, beauty retouch, watermark, deformed, bad anatomy, extra limbs, studio flash, ring light, rim light, key light, fill light, beauty dish, softbox, golden hour, cinematic lighting, cinematic, moody lighting, moody, dramatic lighting, atmospheric lighting, film lighting, warm glow, colour graded, teal orange, warm colour grade, professional photography, perfectly lit, staged, stock photo, flattering light, beauty lighting, soft light, model pose, model face, glossy skin, porcelain skin, perfect complexion, magazine photo, fashion photo, high fashion, editorial, perfect composition, centred portrait, symmetrical composition, hyperrealistic rendering, overprocessed, HDR, oversaturated, digital art, beautiful lighting, gorgeous lighting, sharp focus, ultra sharp, 8k, 4k resolution, ultra detailed, intricate details, masterpiece, best quality, high quality, professional photo, DSLR, mirrorless camera, 50mm lens, bokeh, depth of field, shallow dof, studio background, clean background, perfect skin, flawless complexion, instagram filter, beauty filter, face tune, smooth';
 
 // Pass 1: Generate with FLUX Dev via fal-ai/flux-lora
 // FLUX architecture — far superior skin texture and photorealism vs SD-based models
 function buildRVBody(prompt, charUrl, hasLoRA, loraPath, loraTrigger, slideIndex) {
   // Per-slide realism — early slides rawer, later slides still real but calmer
   const realismSuffixes = [
-    ', ugly badly lit phone selfie, slightly motion blurred, harsh overhead light, cheap home, skin looks sore and reactive, NOT cinematic, NOT beautiful',
-    ', dim cheap lamp light, slightly grainy, ordinary messy home, skin still irritated, candid unaware, NOT staged, NOT moody',
-    ', flat indoor light, slightly washed out, ordinary bedroom, phone front camera, slightly off-centre, NOT professional',
-    ', natural window light flat and grey, slightly underexposed, ordinary home, real skin texture visible, NOT cinematic, NOT glowing',
-    ', flat daylight through window, slightly grainy, real home not staged, normal person not a model, NOT editorial, NOT magazine',
-    ', slightly overexposed daylight, phone camera, ordinary car or home, real person not a model, NOT cinematic, NOT golden hour',
-  ];
+    ', JPEG compression artefacts, phone front camera noise, skin looks raw and reactive, harsh bathroom overhead light casting unflattering shadows, slightly motion blurred, cheap cluttered home, zero retouching, looks like a real bad selfie',
+    ', phone camera grain and noise, dim lamp casting yellow uneven light, underexposed shadows, skin still visibly irritated, slightly off-centre framing, real messy home not staged, candid unaware expression',
+    ', slightly washed out flat indoor light, phone selfie quality, visible skin texture and pores, ordinary bedroom background, slightly imperfect framing, no retouching no filter',
+    ', natural grey window light, slightly underexposed, JPEG phone quality, real skin texture visible with natural pores and slight redness, ordinary home background, nothing staged',
+    ', flat overcast daylight, slight phone camera grain, real person not a model, uneven skin tone visible, ordinary cluttered home background, no filter no edit',
+    ', slightly overexposed car or home daylight, phone selfie noise, real skin with slight unevenness, casual messy hair, looks like genuine phone footage not a photoshoot',
+  ]
   const realismSuffix = realismSuffixes[Math.min(slideIndex || 0, 5)];
 
   let finalPrompt = prompt + realismSuffix;
@@ -1327,7 +1327,7 @@ function buildRVBody(prompt, charUrl, hasLoRA, loraPath, loraTrigger, slideIndex
     negative_prompt: RV_NEGATIVE,
     image_size: { width: 768, height: 1360 },
     num_inference_steps: 28,
-    guidance_scale: 2.5,
+    guidance_scale: 2.0,
     num_images: 1,
     output_format: 'jpeg',
     enable_safety_checker: false,
@@ -1528,6 +1528,12 @@ SCENE RULES (critical):
 SCENE TYPES: selfie, mirror, lifestyle, skin_close, app, product
 Each slide needs SHORT story text (3-8 words max) continuing the narrative.
 Slide 1 text must be EXACTLY: "${hook}"
+TEXT STYLE RULES (critical for authenticity):
+- Slides 2-6 text must feel like a real person typed it — lowercase preferred, imperfect, raw
+- Use specific sensory language: "my face was burning", "couldn't stop itching", "cried in the bathroom"
+- NEVER use polished marketing language: no "transformed", "journey", "incredible results"
+- Short fragments are better than complete sentences: "still burning tho" not "my skin was still burning"
+- Slide 6 closes the emotional loop from slide 1 — make it feel earned not advertised
 
 Return ONLY a JSON array of exactly 6 objects:
 [{"slide":1,"type":"selfie","scene":"messy real indoor location with outfit and harsh lighting details","skin_state":"skin condition at this stage","text":"story text 3-8 words"},...]`;
@@ -1664,13 +1670,16 @@ Caption style: ${style}
 
 Rules:
 - Max 150 words
-- Feels natural and human, not salesy — reads like a real person's post not a brand
-- This is a personal story first — the app is mentioned as what helped, not promoted
-- Ends with a question or statement that signals this is an ongoing journey — makes people want to follow for updates
+- Write in lowercase, casual, imperfect — like a real person typed it on their phone, not a brand
+- Use specific sensory details: "my face was literally burning", "couldn't stop scratching", "cried in the bathroom after"
+- NEVER use polished words: no "transformed", "journey", "incredible", "amazing", "life-changing"
+- This is a personal story first — the app is mentioned briefly as what helped, not promoted
+- Ends with a question or statement that signals this is ongoing — makes people want to follow for updates
 - The ending should make viewers feel like unfollowing means missing what happens next
 - Include exactly 5 relevant hashtags at the end on a new line (format: #tag)
-- No emojis, keep it conversational
 - No medical claims about curing conditions
+- Use contractions and fragments: "was literally" not "was literally feeling", "idk" not "I don't know"
+- Must feel like bucket A content (real, emotional, human) not bucket B (clearly generated)
 - Do NOT start with "I" — start with a statement or observation
 
 Return ONLY the caption text followed by hashtags. No preamble.`;
@@ -2619,6 +2628,12 @@ SCENE RULES (critical):
 SCENE TYPES: selfie, mirror, lifestyle, skin_close, app, product
 Each slide needs SHORT story text (3-8 words max) continuing the narrative.
 Slide 1 text must be EXACTLY: "${hook}"
+TEXT STYLE RULES (critical for authenticity):
+- Slides 2-6 text must feel like a real person typed it — lowercase preferred, imperfect, raw
+- Use specific sensory language: "my face was burning", "couldn't stop itching", "cried in the bathroom"
+- NEVER use polished marketing language: no "transformed", "journey", "incredible results"
+- Short fragments are better than complete sentences: "still burning tho" not "my skin was still burning"
+- Slide 6 closes the emotional loop from slide 1 — make it feel earned not advertised
 
 Return ONLY a JSON array of exactly 6 objects:
 [{"slide":1,"type":"selfie","scene":"messy real indoor location with outfit and harsh lighting details","skin_state":"skin condition at this stage","text":"story text 3-8 words"},...]` }] })
