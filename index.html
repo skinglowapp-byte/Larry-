@@ -1070,51 +1070,45 @@ async function generateHooks() {
   const count = document.getElementById('hook-count').value;
   const context = document.getElementById('hook-context').value;
 
-  const prompt = `You are a viral TikTok content strategist who specialises in sensitive skincare content for eczema and rosacea sufferers.
+  const prompt = `You are a viral TikTok content strategist for sensitive skincare (eczema and rosacea).
 
-PROVEN WINNING HOOK (628 views, 98% FYP traffic on a brand new account):
+PROVEN WINNING HOOK (752 views, 21% completion on a brand new account):
 "I spent 6 months avoiding mirrors because of my rosacea until a random girl at Sephora told me about this"
 
-Break down WHY this hook worked:
-- Specific time period ("6 months") — makes it feel real not vague
-- Specific embarrassing behaviour ("avoiding mirrors") — deeply relatable shame moment
-- Unexpected specific source ("a random girl at Sephora") — not a doctor, not an ad, a real person
-- Open loop ("told me about this") — forces the swipe to find out what
+HOOK FORMAT RULES (non-negotiable):
+- MUST start with "I" or "My" — no exceptions
+- Second word must be a physical action or time period: "I spent", "I stopped", "My skin", "I cancelled", "I cried"
+- Must contain immediate physical sensation or pain: burning, raw, itching, bleeding, flaking, stinging, swollen
+- BANNED opening words: "Sometimes", "One day", "You know", "Ever notice", "Have you", "When I"
+- BANNED soft phrases anywhere in hook: "sometimes", "one day", "you know how", "ever notice", "might help", "worth a try", "still early"
 
-RETENTION-FIRST HOOK FORMULA:
-The hook must create a CURIOSITY GAP that cannot be resolved without watching all 6 slides.
-[Specific time period] + [visceral physical/emotional pain behaviour] + [unexpected real-world source] + [unresolved open loop]
+SENSORY SPECIFICITY RULE:
+Every hook must include at least ONE of these specific physical details:
+- Time: "at 2am", "every morning", "for 6 months", "3 years"  
+- Location: "in the work bathroom", "at Target checkout", "on the tube", "in my car"
+- Physical sensation: "face was burning", "couldn't stop scratching", "skin was raw", "eyes were watering from the sting"
+- Behaviour caused by pain: "cancelled the date", "wore turtlenecks in July", "turned the lights off before getting undressed"
 
-The viewer must think "wait what did she find out?" — they cannot already guess the answer from the hook alone.
+CURIOSITY GAP RULE:
+The hook must end mid-story. The viewer cannot guess what happens next.
+WRONG: "I found something that helped my rosacea" — viewer already knows the outcome
+RIGHT: "until a stranger at Target noticed my arms and said something I didn't expect" — viewer has no idea what's coming
 
-HIGH-PERFORMING PATTERNS — model every hook on these:
-1. Visceral pain hook: "My skin burned every single morning for [X months] until a [unexpected person] at [specific place] told me I was doing [specific thing] completely wrong"
-2. Avoidance hook: "I spent [X months/years] [avoiding something specific and normal] because of my [rosacea/eczema] until [unexpected person] showed me [open loop]"
-3. Money wasted hook: "I spent $[specific amount] on [specific products] that made my [rosacea/eczema] worse until a [unexpected person] at [specific place] told me to stop"
-4. Hiding hook: "I [cancelled/turned down/quit] [specific normal life thing] [X times] because of my skin flaring until [unexpected source]"
-5. Relationship hook: "My [partner/mum/friend] thought I was being dramatic about my skin until they saw what happened in week [number]"
-6. Misdiagnosis hook: "I thought my [specific product] was helping my [rosacea/eczema] but it was actually [making it worse/damaging my barrier] until [unexpected person] explained why"
+HIGH-PERFORMING PATTERNS:
+1. Physical pain hook: "My [body part] was [specific sensation] every [time] for [period] until [unexpected person] at [specific place] told me I was doing [specific thing] wrong"
+2. Avoidance hook: "I [cancelled/quit/turned down] [specific normal thing] [X times] because my [rosacea/eczema] kept [specific behaviour] until [unexpected source]"
+3. Hiding hook: "I [wore/used/did specific thing] for [time period] just to hide my [specific skin problem] until [unexpected person] at [specific place] said something"
+4. Money wasted hook: "I spent $[specific amount] on [specific product type] that [specific bad outcome] until [unexpected person] explained what I was actually doing to my skin"
+5. Misdiagnosis hook: "My [specific product] was making my [rosacea/eczema] worse for [time period] and I had no idea until [unexpected real person] pointed it out"
+6. Relationship hook: "My [partner/mum/friend] thought I was being dramatic about my skin until [specific incident] happened in [timeframe]"
 
-CURIOSITY GAP RULES (retention killers to avoid):
-- NEVER write a hook where the viewer can already guess the ending — "I found a great routine" closes the loop too early
-- NEVER use vague words: "amazing", "life-changing", "incredible" — they signal low quality content
-- The hook must end mid-story — the viewer is left genuinely not knowing what happens next
-- Use sensory/physical language — "burned", "raw", "crying", "embarrassed" — triggers emotional retention
-
-CRITICAL RULES:
-- Always include a SPECIFIC time period (3 weeks, 6 months, 2 years — never vague)
-- Always include a SPECIFIC embarrassing or painful behaviour — the more visceral the better
-- The source of change must feel unexpected and real — a stranger, a random person, not a doctor or ad
-- End with an UNRESOLVED open loop — viewer cannot guess what happens next
-- Never mention the app name, AI, or any product directly in the hook
-- No medical claims
-- Write in natural first-person conversational English — sounds like a real person texting a friend
-- Each hook must feel like a completely different story — vary the pain, time period, and source
+BANNED WORDS IN HOOKS: "amazing", "incredible", "life-changing", "transformed", "journey", "results", "glowing", "cleared up", "fixed", "healed", "cured", "worked", "helped"
 
 App context:
 ${context}
 
-Generate ${count} unique hooks. Return ONLY a JSON array of strings. No preamble, no markdown. Example: ["hook 1","hook 2"]`;
+Generate ${count} unique hooks. Each must start with "I" or "My", contain physical sensation, and end with an unresolved open loop. Return ONLY a JSON array of strings. No preamble, no markdown. Example: ["hook 1","hook 2"]`;
+
 
   try {
     const res = await fetch('/api/claude', {
@@ -1500,23 +1494,27 @@ CRITICAL INSIGHT: TikTok data shows most viewers leave before slide 4. You must 
 The product/resolution must be visible by slide 3 — not slide 5 or 6.
 This is a personal story first. The product is revealed as the solution, not promoted.
 
-STORY STRUCTURE (compressed arc — payoff by slide 3):
-- Slide 1: Hook moment — the specific embarrassing behaviour from the hook, raw and painful, skin problem visible. Text = exact hook.
-- Slide 2: Emotional lowest point — the specific moment of shame/hiding/cancelling. Very short punchy text. Must land in under 2 seconds.
-- Slide 3: Discovery AND early result — finds the solution AND hints at change already happening. Text teases the outcome.
-- Slide 4: Visible progress — real improvement, same setting as slide 1 for contrast. Skin noticeably calmer.
-- Slide 5: More progress or confirmation — different setting, skin clearly better, person looks relieved not staged.
-- Slide 6: After state — confident, same ordinary setting, real person. Text closes the loop on the hook story.
+STORY STRUCTURE (6-slide arc — no setup, straight into pain):
+- Slide 1: PAIN — no setup, no context. Raw physical reality. Skin problem visible and specific. Text = exact hook.
+- Slide 2: ESCALATION — failed attempts, getting worse, shame deepening. Show what they tried that didn't work. Text = 3-4 words, lowercase, raw. No app, no solution yet.
+- Slide 3: STRANGER/INSIGHT MOMENT — the unexpected person or realisation from the hook. The turning point. Do NOT reveal the outcome yet — tease it. No app mention.
+- Slide 4: REALISATION — they understand what was wrong. The "oh" moment. Skin starting to calm. Still no app name — build tension.
+- Slide 5: APP REVEAL — first time Aureya or the app is shown/mentioned. Show the app on the phone. Person looks relieved, curious, hopeful. NOT before this slide.
+- Slide 6: EMOTIONAL WIN — specific emotional resolution that closes the hook loop. NOT "results" language. Language like "for the first time I know what's triggering it" or "i actually looked forward to washing my face".
+
+APP MENTION GATING (hard rule):
+- Do NOT mention Aureya, any app, or any product by name before slide 5
+- Slides 1-4 must build tension WITHOUT revealing the solution
+- The app reveal on slide 5 must feel earned, not advertised
 
 PACING RULES (retention is everything — target >20% completion):
-- Slide 1 text = exact hook, nothing else. Viewer must want to swipe immediately.
-- Slide 2 text = 3-4 words MAX. Hit the emotional low point instantly. No padding.
-- Slide 3 text = tease the discovery without revealing it. Create urgency to keep swiping.
-- Slide 4 text = first hint of progress — viewer thinks "wait is this real?" — keeps them watching
-- Slide 5 text = confirmation the change is real — emotional relief moment
-- Slide 6 text = closes the story loop from the hook — answers what was promised in slide 1
-- Every slide must make the viewer feel they'll miss something if they stop watching
-- NEVER repeat information already shown — each slide must add something new
+- Slide 1 text = exact hook. No changes.
+- Slide 2 text = 3-4 words MAX, lowercase. Physical or emotional. No padding.
+- Slide 3 text = tease — creates urgency without revealing. "she said something i wasn't expecting"
+- Slide 4 text = realisation moment — short, visceral. "oh. it was my cleanser."
+- Slide 5 text = app shown, brief. "this changed how i look at my skin"
+- Slide 6 text = emotional close, lowercase, specific. Banned words: "amazing", "transformed", "results", "incredible", "still early", "worth a try", "might help"
+- NEVER repeat information — each slide adds something new
 
 SCENE RULES (critical):
 - ALL scenes must be INDOORS — bedroom, bathroom, kitchen, sofa, office, car only
@@ -2600,23 +2598,27 @@ CRITICAL INSIGHT: TikTok data shows most viewers leave before slide 4. You must 
 The product/resolution must be visible by slide 3 — not slide 5 or 6.
 This is a personal story first. The product is revealed as the solution, not promoted.
 
-STORY STRUCTURE (compressed arc — payoff by slide 3):
-- Slide 1: Hook moment — the specific embarrassing behaviour from the hook, raw and painful, skin problem visible. Text = exact hook.
-- Slide 2: Emotional lowest point — the specific moment of shame/hiding/cancelling. Very short punchy text. Must land in under 2 seconds.
-- Slide 3: Discovery AND early result — finds the solution AND hints at change already happening. Text teases the outcome.
-- Slide 4: Visible progress — real improvement, same setting as slide 1 for contrast. Skin noticeably calmer.
-- Slide 5: More progress or confirmation — different setting, skin clearly better, person looks relieved not staged.
-- Slide 6: After state — confident, same ordinary setting, real person. Text closes the loop on the hook story.
+STORY STRUCTURE (6-slide arc — no setup, straight into pain):
+- Slide 1: PAIN — no setup, no context. Raw physical reality. Skin problem visible and specific. Text = exact hook.
+- Slide 2: ESCALATION — failed attempts, getting worse, shame deepening. Show what they tried that didn't work. Text = 3-4 words, lowercase, raw. No app, no solution yet.
+- Slide 3: STRANGER/INSIGHT MOMENT — the unexpected person or realisation from the hook. The turning point. Do NOT reveal the outcome yet — tease it. No app mention.
+- Slide 4: REALISATION — they understand what was wrong. The "oh" moment. Skin starting to calm. Still no app name — build tension.
+- Slide 5: APP REVEAL — first time Aureya or the app is shown/mentioned. Show the app on the phone. Person looks relieved, curious, hopeful. NOT before this slide.
+- Slide 6: EMOTIONAL WIN — specific emotional resolution that closes the hook loop. NOT "results" language. Language like "for the first time I know what's triggering it" or "i actually looked forward to washing my face".
+
+APP MENTION GATING (hard rule):
+- Do NOT mention Aureya, any app, or any product by name before slide 5
+- Slides 1-4 must build tension WITHOUT revealing the solution
+- The app reveal on slide 5 must feel earned, not advertised
 
 PACING RULES (retention is everything — target >20% completion):
-- Slide 1 text = exact hook, nothing else. Viewer must want to swipe immediately.
-- Slide 2 text = 3-4 words MAX. Hit the emotional low point instantly. No padding.
-- Slide 3 text = tease the discovery without revealing it. Create urgency to keep swiping.
-- Slide 4 text = first hint of progress — viewer thinks "wait is this real?" — keeps them watching
-- Slide 5 text = confirmation the change is real — emotional relief moment
-- Slide 6 text = closes the story loop from the hook — answers what was promised in slide 1
-- Every slide must make the viewer feel they'll miss something if they stop watching
-- NEVER repeat information already shown — each slide must add something new
+- Slide 1 text = exact hook. No changes.
+- Slide 2 text = 3-4 words MAX, lowercase. Physical or emotional. No padding.
+- Slide 3 text = tease — creates urgency without revealing. "she said something i wasn't expecting"
+- Slide 4 text = realisation moment — short, visceral. "oh. it was my cleanser."
+- Slide 5 text = app shown, brief. "this changed how i look at my skin"
+- Slide 6 text = emotional close, lowercase, specific. Banned words: "amazing", "transformed", "results", "incredible", "still early", "worth a try", "might help"
+- NEVER repeat information — each slide adds something new
 
 SCENE RULES (critical):
 - ALL scenes must be INDOORS — bedroom, bathroom, kitchen, sofa, office, car only
