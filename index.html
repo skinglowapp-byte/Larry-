@@ -1572,8 +1572,14 @@ TEXT STYLE RULES (critical for authenticity):
 - Short fragments are better than complete sentences: "still burning tho" not "my skin was still burning"
 - Slide 6 closes the emotional loop from slide 1 — make it feel earned not advertised
 
+MANDATORY SLIDE TYPES (non-negotiable):
+- Slide 5 type MUST be "app" — no exceptions. This is the soft CTA. If you use any other type for slide 5 the output is invalid.
+- Slides 4 or 3 CAN optionally use "product" type to show what wasn't working before the app reveal
+- Slides 1, 2, 3 should use "selfie", "mirror", or "lifestyle" for variety
+- Slide 6 should use "selfie" or "lifestyle" — confident outdoor or wider shot
+
 Return ONLY a JSON array of exactly 6 objects:
-[{"slide":1,"type":"selfie","scene":"messy real indoor location with outfit and harsh lighting details","skin_state":"skin condition at this stage","text":"story text 3-8 words"},...]`;
+[{"slide":1,"type":"selfie","scene":"arm extended selfie from below, bathroom background, harsh light","skin_state":"skin condition at this stage","text":"story text 3-8 words"},...]`;
 
     const planRes = await fetch('/api/claude', {
       method: 'POST',
@@ -1583,6 +1589,10 @@ Return ONLY a JSON array of exactly 6 objects:
     const planData = await planRes.json();
     const clean = (planData.content?.[0]?.text || '[]').replace(/```json|```/g,'').trim();
     slidePlan = JSON.parse(clean);
+    // Enforce slide 5 must be app type
+    if (slidePlan[4] && slidePlan[4].type !== 'app') {
+      slidePlan[4] = { ...slidePlan[4], type: 'app', scene: 'arm extended selfie holding phone showing skincare app screen' };
+    }
     setLog(`Story: ${slidePlan.map(s=>s.text?.slice(0,18)||s.type).join(' → ')}`, 'ok');
   } catch(e) {
     setLog('Story plan failed, using fallback', 'err');
@@ -2689,11 +2699,21 @@ TEXT STYLE RULES (critical for authenticity):
 - Short fragments are better than complete sentences: "still burning tho" not "my skin was still burning"
 - Slide 6 closes the emotional loop from slide 1 — make it feel earned not advertised
 
+MANDATORY SLIDE TYPES (non-negotiable):
+- Slide 5 type MUST be "app" — no exceptions. This is the soft CTA. If you use any other type for slide 5 the output is invalid.
+- Slides 4 or 3 CAN optionally use "product" type to show what wasn't working before the app reveal
+- Slides 1, 2, 3 should use "selfie", "mirror", or "lifestyle" for variety
+- Slide 6 should use "selfie" or "lifestyle" — confident outdoor or wider shot
+
 Return ONLY a JSON array of exactly 6 objects:
-[{"slide":1,"type":"selfie","scene":"messy real indoor location with outfit and harsh lighting details","skin_state":"skin condition at this stage","text":"story text 3-8 words"},...]` }] })
+[{"slide":1,"type":"selfie","scene":"arm extended selfie from below, bathroom background, harsh light","skin_state":"skin condition at this stage","text":"story text 3-8 words"},...]` }] })
       });
       const planData = await planRes.json();
       bulkPlan = JSON.parse((planData.content?.[0]?.text || '[]').replace(/\`\`\`json|\`\`\`/g,'').trim());
+      // Enforce slide 5 must be app type
+      if (bulkPlan[4] && bulkPlan[4].type !== 'app') {
+        bulkPlan[4] = { ...bulkPlan[4], type: 'app', scene: 'arm extended selfie holding phone showing skincare app screen' };
+      }
     } catch(e) {
       bulkLog('  Plan failed, using fallback scenes', 'err');
     }
