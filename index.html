@@ -1681,7 +1681,13 @@ async function generateSlide(i, hook, arch, falKey, acc, charUrl, hasLoRA) {
       'this is what my skin looks like now',
     ];
     const slideText = planEntry?.text || storyFallbacks[i] || '';
-    const finalUrl = await compositeTextOnImage(currentUrl, slideText, i, variant.label);
+    let finalUrl = await compositeTextOnImage(currentUrl, slideText, i, variant.label);
+
+    // For app slide (slide 5), composite a real app UI overlay onto the image
+    if (planEntry?.type === 'app') {
+      const appNameOverlay = document.getElementById('app-name')?.value || 'Aureya';
+      finalUrl = await compositeAppOverlay(finalUrl, appNameOverlay);
+    }
 
     generatedImages[i] = finalUrl;
     cell.classList.remove('generating');
@@ -2830,6 +2836,82 @@ x=0.5 y=0.5 is center. x=0 is left edge, x=1 is right edge. y=0 is top, y=1 is b
     ];
     return fallbacks[slideIndex] || { x: 0.5, y: 0.75, align: 'center', size: 'medium' };
   }
+}
+
+// ─── APP UI OVERLAY ───────────────────────────────────────────────────────────
+async function compositeAppOverlay(imageUrl, appName) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+
+      const W = canvas.width;
+      const H = canvas.height;
+
+      // Card — centered lower third
+      const cardW = W * 0.78;
+      const cardH = H * 0.22;
+      const cardX = (W - cardW) / 2;
+      const cardY = H * 0.56;
+      const r = cardW * 0.05;
+
+      // Dark rounded card
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(cardX + r, cardY);
+      ctx.lineTo(cardX + cardW - r, cardY);
+      ctx.quadraticCurveTo(cardX + cardW, cardY, cardX + cardW, cardY + r);
+      ctx.lineTo(cardX + cardW, cardY + cardH - r);
+      ctx.quadraticCurveTo(cardX + cardW, cardY + cardH, cardX + cardW - r, cardY + cardH);
+      ctx.lineTo(cardX + r, cardY + cardH);
+      ctx.quadraticCurveTo(cardX, cardY + cardH, cardX, cardY + cardH - r);
+      ctx.lineTo(cardX, cardY + r);
+      ctx.quadraticCurveTo(cardX, cardY, cardX + r, cardY);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(8,8,8,0.85)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
+
+      // App name
+      ctx.textAlign = 'center';
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur = 10;
+      ctx.font = `700 ${cardH * 0.24}px -apple-system, "DM Sans", sans-serif`;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(appName, W / 2, cardY + cardH * 0.32);
+
+      // Tagline
+      ctx.shadowBlur = 0;
+      ctx.font = `400 ${cardH * 0.14}px -apple-system, "DM Sans", sans-serif`;
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.fillText('AI skincare · sensitive skin', W / 2, cardY + cardH * 0.52);
+
+      // Divider
+      ctx.beginPath();
+      ctx.moveTo(cardX + cardW * 0.15, cardY + cardH * 0.63);
+      ctx.lineTo(cardX + cardW * 0.85, cardY + cardH * 0.63);
+      ctx.strokeStyle = 'rgba(200,255,90,0.5)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // CTA
+      ctx.font = `600 ${cardH * 0.16}px -apple-system, "DM Sans", sans-serif`;
+      ctx.fillStyle = '#c8ff5a';
+      ctx.fillText('link in bio ↑', W / 2, cardY + cardH * 0.84);
+
+      resolve(canvas.toDataURL('image/jpeg', 0.88));
+    };
+    img.onerror = () => resolve(imageUrl);
+    img.src = imageUrl;
+  });
 }
 
 async function compositeTextOnImage(imageUrl, text, slideIndex, slideLabel) {
