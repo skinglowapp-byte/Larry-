@@ -1405,7 +1405,9 @@ function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex) {
     'lying in bed propped on elbow, phone held above, bedding visible, morning light',
     'walking outside shot, slight motion blur, street or neighbourhood visible behind',
   ];
-  const framing = framings[slideIndex % framings.length];
+  // Randomise framing per generation so slides don't always use same angles
+  const framingOrder = [0,4,2,8,6,10,3,7,1,9,5,11];
+  const framing = framings[framingOrder[slideIndex % framingOrder.length]];
 
   // Outfits — all casual, no styling
   const outfits = [
@@ -1450,11 +1452,11 @@ function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex) {
   let prompt = '';
 
   if (type === 'selfie') {
-    prompt = `${qualityPrefix} ${archClean}, ${framing}, ${scene}, ${skinState}, ${outfit}, ${environment}, no makeup, real person not a model, slightly imperfect composition, fully clothed, authentic candid phone photo, ${realismAnchor}`;
+    prompt = `${framing}, ${environment}, ${qualityPrefix} ${archClean}, ${skinState}, ${outfit}, no makeup, real person not a model, authentic candid phone photo, ${realismAnchor}`;
   } else if (type === 'mirror') {
-    prompt = `${qualityPrefix} young woman looking at bathroom mirror, ${archClean}, ${scene}, ${skinState}, ${framing}, ${outfit}, morning routine, no makeup, ${environment}, authentic candid moment, fully clothed, ${realismAnchor}`;
+    prompt = `bathroom mirror selfie, phone visible in reflection, ${environment}, ${qualityPrefix} ${archClean}, ${skinState}, ${outfit}, morning routine, no makeup, authentic candid moment, fully clothed, ${realismAnchor}`;
   } else if (type === 'lifestyle') {
-    prompt = `${qualityPrefix} ${archClean}, ${framing}, ${scene}, ${skinState}, ${outfit}, natural everyday candid moment, slightly awkward unposed position, real person living their life not posing, no makeup, real home environment, fully clothed, ${realismAnchor}, not outdoors, no golden hour, no cinematic lighting, not a photoshoot`;
+    prompt = `${framing}, ${environment}, ${qualityPrefix} ${archClean}, ${skinState}, ${outfit}, natural everyday candid moment, slightly awkward unposed real person not posing, no makeup, fully clothed, ${realismAnchor}`;
   } else if (type === 'skin_close') {
     prompt = `${camera}, ${archClean}, extreme macro close-up face, ultra-detailed skin texture, visible open pores, fine peach fuzz, natural sebum and oiliness, ${skinState}, redness or unevenness, subtle blemishes, no makeup, raw unedited skin, no filters, no retouching, real person skin not CGI, ${realismAnchor}`;
   } else if (type === 'before_after') {
@@ -1462,7 +1464,7 @@ function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex) {
   } else if (type === 'product') {
     prompt = `${qualityPrefix} young woman holding skincare products, ${scene || 'cluttered bathroom counter with products'}, ${outfit}, ${lighting}, looking at products with uncertain or curious expression, slightly imperfect framing, no text, real home not a studio, fully clothed, ${realismAnchor}`;
   } else if (type === 'app') {
-    prompt = `${qualityPrefix} ${archClean}, holding iPhone showing a skincare app screen, ${scene}, ${framing}, ${outfit}, ${environment}, app screen slightly reflective, candid unaware expression, harsh unflattering indoor light, no makeup, fully clothed, ${realismAnchor}`;
+    prompt = `${framing}, ${environment}, ${qualityPrefix} ${archClean}, holding iPhone showing a pink skincare app, ${outfit}, phone screen glowing softly, person looking at phone with slight relief, no makeup, fully clothed, ${realismAnchor}`;
   } else {
     prompt = `${qualityPrefix} ${archClean}, ${styleDesc}, ${framing}, ${environment}, no makeup, authentic real person not a model, fully clothed, ${realismAnchor}`;
   }
