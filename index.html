@@ -1392,18 +1392,18 @@ function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex) {
 
   // Framing — all slightly off, none perfectly composed
   const framings = [
-    'face and shoulders slightly off-centre, cut off at top slightly, hand visible holding phone',
-    'waist-up selfie in car, seatbelt visible, car interior background, sunlight through window',
-    'three-quarter shot from slightly above, background clutter visible, real home environment',
-    'tight face close-up, slightly shaky, forehead slightly cropped, skin texture visible',
-    'medium full-body shot from waist up, person slightly to one side, real room visible behind',
-    'low angle slightly looking down at camera, chin tucked, relatable unflattering angle',
-    'sitting on floor or bed, camera propped or held low, legs visible, messy room behind',
-    'over-shoulder or side angle, person looking away from camera, candid not posed',
-    'wide shot showing full outfit and environment, person small in frame, real home or street',
-    'bathroom mirror selfie, phone visible in reflection, harsh bathroom lighting',
-    'lying in bed propped on elbow, phone held above, bedding visible, morning light',
-    'walking outside shot, slight motion blur, street or neighbourhood visible behind',
+    'selfie from below looking up, arm extended holding phone visible in frame, chin down slightly, unflattering angle, hand and wrist visible',
+    'car selfie, arm stretched out holding phone, seatbelt visible, steering wheel partially visible, sun coming through window, squinting slightly',
+    'side profile selfie, phone held out to the side, person looking sideways at camera, neck and jaw visible, casual angle',
+    'mirror selfie, full phone visible in reflection, other hand on hip or at side, bathroom or bedroom mirror, harsh light',
+    'selfie from above looking down, arm fully extended upward holding phone, top of head slightly cut off, confident angle',
+    'selfie lying in bed, phone held directly above face, slightly from above, pillow visible, morning look, ceiling or headboard behind',
+    'outdoor selfie shading eyes with free hand, arm holding phone extended, bright sky or building behind, squinting from sun',
+    'selfie sitting in car passenger seat, arm extended toward windscreen, dashboard visible, street outside',
+    'low angle selfie sitting on floor or sofa, knees visible, arm extended low holding phone, looking slightly down at camera',
+    'close selfie face only, phone held very close, arm not fully visible, slight double chin angle, very casual',
+    'selfie walking, slight motion blur, one arm extended holding phone, other arm mid-swing, street behind',
+    'bathroom selfie after shower, towel on head or hair wet, arm out holding phone, bathroom counter visible',
   ];
   // Randomise framing per generation so slides don't always use same angles
   const framingOrder = [0,4,2,8,6,10,3,7,1,9,5,11];
@@ -1452,19 +1452,33 @@ function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex) {
   let prompt = '';
 
   if (type === 'selfie') {
-    prompt = `${framing}, ${environment}, ${qualityPrefix} ${archClean}, ${skinState}, ${outfit}, no makeup, real person not a model, authentic candid phone photo, ${realismAnchor}`;
+    prompt = `${framing}, ${environment}, ${qualityPrefix} ${archClean}, ${skinState}, ${outfit}, arm extended holding phone selfie, no makeup, real person not a model, phone camera selfie not taken by someone else, ${realismAnchor}`;
   } else if (type === 'mirror') {
-    prompt = `bathroom mirror selfie, phone visible in reflection, ${environment}, ${qualityPrefix} ${archClean}, ${skinState}, ${outfit}, morning routine, no makeup, authentic candid moment, fully clothed, ${realismAnchor}`;
+    prompt = `bathroom mirror selfie, full phone visible in reflection being held up, arm visible holding phone, ${qualityPrefix} ${archClean}, ${skinState}, ${outfit}, morning routine, no makeup, taking own photo in mirror, ${realismAnchor}`;
   } else if (type === 'lifestyle') {
-    prompt = `${framing}, ${environment}, ${qualityPrefix} ${archClean}, ${skinState}, ${outfit}, natural everyday candid moment, slightly awkward unposed real person not posing, no makeup, fully clothed, ${realismAnchor}`;
+    prompt = `${framing}, ${environment}, ${qualityPrefix} ${archClean}, ${skinState}, ${outfit}, arm extended holding phone selfie, natural everyday moment, real person taking their own photo not posed by photographer, no makeup, fully clothed, ${realismAnchor}`;
   } else if (type === 'skin_close') {
     prompt = `${camera}, ${archClean}, extreme macro close-up face, ultra-detailed skin texture, visible open pores, fine peach fuzz, natural sebum and oiliness, ${skinState}, redness or unevenness, subtle blemishes, no makeup, raw unedited skin, no filters, no retouching, real person skin not CGI, ${realismAnchor}`;
   } else if (type === 'before_after') {
     prompt = `${qualityPrefix} ${archClean}, split image, left side: woman with ${skinState} looking tired and frustrated, right side: same woman with calmer clearer skin, same camera angle and lighting, ${environment}, authentic, no text overlays, fully clothed`;
   } else if (type === 'product') {
-    prompt = `${qualityPrefix} young woman holding skincare products, ${scene || 'cluttered bathroom counter with products'}, ${outfit}, ${lighting}, looking at products with uncertain or curious expression, slightly imperfect framing, no text, real home not a studio, fully clothed, ${realismAnchor}`;
+    const productScenarios = [
+      `${framing}, ${qualityPrefix} ${archClean}, holding up a skincare product reading the ingredients label, ${outfit}, ${environment}, curious uncertain expression, arm extended selfie angle, no makeup, fully clothed, ${realismAnchor}`,
+      `skincare products laid out on bathroom counter or bed, ${camera}, overhead flat lay shot, hand arranging products, cosy home surface, authentic UGC product shot, no person`,
+      `${qualityPrefix} ${archClean}, sitting on bathroom floor or bed, surrounded by skincare products spread around, ${outfit}, looking overwhelmed at too many products, selfie from slightly above, no makeup, ${realismAnchor}`,
+      `close-up of hand holding a single skincare product, ${camera}, blurred home background, thumb on label, authentic casual product shot, no face visible`,
+      `${framing}, ${qualityPrefix} ${archClean}, showing products in both hands comparing them, ${outfit}, ${environment}, uncertain expression trying to figure out which to use, no makeup, ${realismAnchor}`,
+    ];
+    prompt = productScenarios[Math.floor(Math.random() * productScenarios.length)];
   } else if (type === 'app') {
-    prompt = `${framing}, ${environment}, ${qualityPrefix} ${archClean}, holding iPhone showing a pink skincare app, ${outfit}, phone screen glowing softly, person looking at phone with slight relief, no makeup, fully clothed, ${realismAnchor}`;
+    const appScenarios = [
+      `iPhone laid flat on wooden table or bedside table, screen facing up showing a pink and white skincare app with routine cards, ${camera}, overhead angle, hand reaching in from side, cosy home surface, authentic UGC`,
+      `${framing}, ${qualityPrefix} ${archClean}, holding iPhone up showing a skincare app screen front-facing, ${outfit}, phone screen glowing, person looking down at screen with slight relief, no makeup, ${realismAnchor}`,
+      `iPhone screen close-up held in hand, skincare app visible showing product recommendations, ${camera}, thumb scrolling, other hand partially visible, cosy indoor light, authentic phone screenshot feel`,
+      `${qualityPrefix} ${archClean}, lying in bed or on sofa, phone held above face showing skincare app screen, ${outfit}, screen reflecting light on face, casual evening scroll, no makeup, ${realismAnchor}`,
+      `iPhone propped against bathroom counter or mug showing skincare app routine screen, ${camera}, bathroom or kitchen background, hand adjusting phone, real home environment`,
+    ];
+    prompt = appScenarios[Math.floor(Math.random() * appScenarios.length)];
   } else {
     prompt = `${qualityPrefix} ${archClean}, ${styleDesc}, ${framing}, ${environment}, no makeup, authentic real person not a model, fully clothed, ${realismAnchor}`;
   }
@@ -1536,17 +1550,19 @@ SCENE RULES (critical):
 - Slide 6 must be indoor — bathroom mirror, bedroom window, kitchen morning light
 
 SCENE TYPES: selfie, mirror, lifestyle, skin_close, app, product
+COMBINATION RULE: Slides 4-5 can use product then app back to back — show the products that weren't working (slide 4 product), then the app that figured it out (slide 5 app). This is a strong soft CTA sequence.
 SCENE VARIETY RULE (critical for realism):
 - No two consecutive slides should use the same scene type
 - Slides must vary between: close-up face, wide body shot, car selfie, mirror, outdoor, bedroom, bathroom
-- Slide 1: raw close-up or bathroom mirror — pain visible
-- Slide 2: wider shot or different room — shows the person in their real life
-- Slide 3: different angle again — car, outside, or sitting somewhere
-- Slide 4: skin close-up OR mirror check — shows the change
-- Slide 5: app slide — phone visible, person looking at screen
-- Slide 6: confident wider shot in real environment — different from slide 1
-- The "scene" field must include specific framing: "wide waist-up shot", "car selfie seatbelt visible", "over-shoulder bathroom mirror", "sitting on bed from above", "outdoor walking shot"
-- NEVER describe 6 slides all as face close-ups or bathroom selfies
+- Slide 1: selfie from below or mirror — arm extended, hand visible, raw skin visible, pain on face
+- Slide 2: different angle — side profile selfie, or lying in bed selfie from above, or sitting on floor selfie low angle
+- Slide 3: another angle — outdoor selfie shading eyes, or car selfie with seatbelt, or mirror selfie
+- Slide 4: skin close-up selfie — phone held very close to face, raw skin texture visible OR mirror check showing improvement
+- Slide 5: app slide — phone laid flat on surface (table, bed), screen visible, no person needed
+- Slide 6: confident outdoor or car selfie — arm extended, person looks relaxed, different environment from slide 1
+- Every "scene" field MUST mention the selfie angle: "arm extended selfie from below", "car selfie seatbelt visible arm out", "mirror selfie phone in reflection", "lying in bed phone above face"
+- ALL shots must look like the person took the photo themselves — arm extended, phone visible, selfie angle
+- NEVER describe shots as if taken by a photographer or third party
 Each slide needs SHORT story text (3-8 words max) continuing the narrative.
 Slide 1 text must be EXACTLY: "${hook}"
 TEXT STYLE RULES (critical for authenticity):
@@ -2651,17 +2667,19 @@ SCENE RULES (critical):
 - Slide 6 must be indoor — bathroom mirror, bedroom window, kitchen morning light
 
 SCENE TYPES: selfie, mirror, lifestyle, skin_close, app, product
+COMBINATION RULE: Slides 4-5 can use product then app back to back — show the products that weren't working (slide 4 product), then the app that figured it out (slide 5 app). This is a strong soft CTA sequence.
 SCENE VARIETY RULE (critical for realism):
 - No two consecutive slides should use the same scene type
 - Slides must vary between: close-up face, wide body shot, car selfie, mirror, outdoor, bedroom, bathroom
-- Slide 1: raw close-up or bathroom mirror — pain visible
-- Slide 2: wider shot or different room — shows the person in their real life
-- Slide 3: different angle again — car, outside, or sitting somewhere
-- Slide 4: skin close-up OR mirror check — shows the change
-- Slide 5: app slide — phone visible, person looking at screen
-- Slide 6: confident wider shot in real environment — different from slide 1
-- The "scene" field must include specific framing: "wide waist-up shot", "car selfie seatbelt visible", "over-shoulder bathroom mirror", "sitting on bed from above", "outdoor walking shot"
-- NEVER describe 6 slides all as face close-ups or bathroom selfies
+- Slide 1: selfie from below or mirror — arm extended, hand visible, raw skin visible, pain on face
+- Slide 2: different angle — side profile selfie, or lying in bed selfie from above, or sitting on floor selfie low angle
+- Slide 3: another angle — outdoor selfie shading eyes, or car selfie with seatbelt, or mirror selfie
+- Slide 4: skin close-up selfie — phone held very close to face, raw skin texture visible OR mirror check showing improvement
+- Slide 5: app slide — phone laid flat on surface (table, bed), screen visible, no person needed
+- Slide 6: confident outdoor or car selfie — arm extended, person looks relaxed, different environment from slide 1
+- Every "scene" field MUST mention the selfie angle: "arm extended selfie from below", "car selfie seatbelt visible arm out", "mirror selfie phone in reflection", "lying in bed phone above face"
+- ALL shots must look like the person took the photo themselves — arm extended, phone visible, selfie angle
+- NEVER describe shots as if taken by a photographer or third party
 Each slide needs SHORT story text (3-8 words max) continuing the narrative.
 Slide 1 text must be EXACTLY: "${hook}"
 TEXT STYLE RULES (critical for authenticity):
