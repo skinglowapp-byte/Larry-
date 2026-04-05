@@ -1393,11 +1393,17 @@ function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex) {
   // Framing — all slightly off, none perfectly composed
   const framings = [
     'face and shoulders slightly off-centre, cut off at top slightly, hand visible holding phone',
-    'waist-up selfie, arm extended at awkward angle, head slightly tilted, not posed',
-    'three-quarter shot, background clutter slightly out of focus but visible',
-    'tight face close-up, slightly shaky, forehead slightly cropped',
-    'medium shot, subject slightly to one side, negative space on the other',
-    'shoulder-up, casual head tilt, eyes not perfectly centred in frame',
+    'waist-up selfie in car, seatbelt visible, car interior background, sunlight through window',
+    'three-quarter shot from slightly above, background clutter visible, real home environment',
+    'tight face close-up, slightly shaky, forehead slightly cropped, skin texture visible',
+    'medium full-body shot from waist up, person slightly to one side, real room visible behind',
+    'low angle slightly looking down at camera, chin tucked, relatable unflattering angle',
+    'sitting on floor or bed, camera propped or held low, legs visible, messy room behind',
+    'over-shoulder or side angle, person looking away from camera, candid not posed',
+    'wide shot showing full outfit and environment, person small in frame, real home or street',
+    'bathroom mirror selfie, phone visible in reflection, harsh bathroom lighting',
+    'lying in bed propped on elbow, phone held above, bedding visible, morning light',
+    'walking outside shot, slight motion blur, street or neighbourhood visible behind',
   ];
   const framing = framings[slideIndex % framings.length];
 
@@ -1418,8 +1424,12 @@ function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex) {
     'messy bedroom background, unmade bed or clothes on chair slightly visible',
     'real kitchen background, dishes or mugs on counter, ordinary UK flat interior',
     'living room sofa or floor, cushions and everyday objects in background',
-    'bathroom or bedroom, window light, real home not a set',
-    'car interior or home hallway, ordinary real environment',
+    'car interior, seatbelt visible, sun visor down, street visible through window',
+    'outside on a residential street or car park, overcast daylight, houses or parked cars behind',
+    'office desk background, laptop and coffee cup visible, ordinary workplace',
+    'sitting on steps outside a building, concrete steps, real neighbourhood behind',
+    'home hallway or landing, coat rack or door visible behind',
+    'supermarket or pharmacy aisle, shelves visible in background',
   ];
   const environment = environments[slideIndex % environments.length];
 
@@ -1440,11 +1450,11 @@ function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex) {
   let prompt = '';
 
   if (type === 'selfie') {
-    prompt = `${qualityPrefix} selfie of a young woman, ${archClean}, ${scene}, ${skinState}, ${framing}, ${outfit}, ${environment}, arm extended holding phone, no makeup, real person not a model, slightly imperfect composition, fully clothed, ${realismAnchor}`;
+    prompt = `${qualityPrefix} ${archClean}, ${framing}, ${scene}, ${skinState}, ${outfit}, ${environment}, no makeup, real person not a model, slightly imperfect composition, fully clothed, authentic candid phone photo, ${realismAnchor}`;
   } else if (type === 'mirror') {
     prompt = `${qualityPrefix} young woman looking at bathroom mirror, ${archClean}, ${scene}, ${skinState}, ${framing}, ${outfit}, morning routine, no makeup, ${environment}, authentic candid moment, fully clothed, ${realismAnchor}`;
   } else if (type === 'lifestyle') {
-    prompt = `${qualityPrefix} candid photo of a young woman, ${archClean}, ${scene}, ${skinState}, ${outfit}, ${environment}, natural everyday indoor moment, slightly awkward unposed position, harsh unflattering indoor light, no makeup, real home environment, fully clothed, ${realismAnchor}, not outdoors, no golden hour, no cinematic lighting, not a photoshoot`;
+    prompt = `${qualityPrefix} ${archClean}, ${framing}, ${scene}, ${skinState}, ${outfit}, natural everyday candid moment, slightly awkward unposed position, real person living their life not posing, no makeup, real home environment, fully clothed, ${realismAnchor}, not outdoors, no golden hour, no cinematic lighting, not a photoshoot`;
   } else if (type === 'skin_close') {
     prompt = `${camera}, ${archClean}, extreme macro close-up face, ultra-detailed skin texture, visible open pores, fine peach fuzz, natural sebum and oiliness, ${skinState}, redness or unevenness, subtle blemishes, no makeup, raw unedited skin, no filters, no retouching, real person skin not CGI, ${realismAnchor}`;
   } else if (type === 'before_after') {
@@ -1524,6 +1534,17 @@ SCENE RULES (critical):
 - Slide 6 must be indoor — bathroom mirror, bedroom window, kitchen morning light
 
 SCENE TYPES: selfie, mirror, lifestyle, skin_close, app, product
+SCENE VARIETY RULE (critical for realism):
+- No two consecutive slides should use the same scene type
+- Slides must vary between: close-up face, wide body shot, car selfie, mirror, outdoor, bedroom, bathroom
+- Slide 1: raw close-up or bathroom mirror — pain visible
+- Slide 2: wider shot or different room — shows the person in their real life
+- Slide 3: different angle again — car, outside, or sitting somewhere
+- Slide 4: skin close-up OR mirror check — shows the change
+- Slide 5: app slide — phone visible, person looking at screen
+- Slide 6: confident wider shot in real environment — different from slide 1
+- The "scene" field must include specific framing: "wide waist-up shot", "car selfie seatbelt visible", "over-shoulder bathroom mirror", "sitting on bed from above", "outdoor walking shot"
+- NEVER describe 6 slides all as face close-ups or bathroom selfies
 Each slide needs SHORT story text (3-8 words max) continuing the narrative.
 Slide 1 text must be EXACTLY: "${hook}"
 TEXT STYLE RULES (critical for authenticity):
@@ -2628,6 +2649,17 @@ SCENE RULES (critical):
 - Slide 6 must be indoor — bathroom mirror, bedroom window, kitchen morning light
 
 SCENE TYPES: selfie, mirror, lifestyle, skin_close, app, product
+SCENE VARIETY RULE (critical for realism):
+- No two consecutive slides should use the same scene type
+- Slides must vary between: close-up face, wide body shot, car selfie, mirror, outdoor, bedroom, bathroom
+- Slide 1: raw close-up or bathroom mirror — pain visible
+- Slide 2: wider shot or different room — shows the person in their real life
+- Slide 3: different angle again — car, outside, or sitting somewhere
+- Slide 4: skin close-up OR mirror check — shows the change
+- Slide 5: app slide — phone visible, person looking at screen
+- Slide 6: confident wider shot in real environment — different from slide 1
+- The "scene" field must include specific framing: "wide waist-up shot", "car selfie seatbelt visible", "over-shoulder bathroom mirror", "sitting on bed from above", "outdoor walking shot"
+- NEVER describe 6 slides all as face close-ups or bathroom selfies
 Each slide needs SHORT story text (3-8 words max) continuing the narrative.
 Slide 1 text must be EXACTLY: "${hook}"
 TEXT STYLE RULES (critical for authenticity):
