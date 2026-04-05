@@ -1361,7 +1361,7 @@ async function runAuraSR(imageUrl, falKey) {
 
 // Build the full text prompt per scene type
 // Raw authentic UGC — phone camera, real life, not a photoshoot
-function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex) {
+function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex, appName = 'Aureya') {
   const type = planEntry?.type || 'selfie';
   const scene = planEntry?.scene || '';
   const skinState = planEntry?.skin_state || styleDesc;
@@ -1472,11 +1472,11 @@ function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex) {
     prompt = productScenarios[Math.floor(Math.random() * productScenarios.length)];
   } else if (type === 'app') {
     const appScenarios = [
-      `iPhone laid flat on wooden table or bedside table, screen facing up showing a pink and white skincare app with routine cards, ${camera}, overhead angle, hand reaching in from side, cosy home surface, authentic UGC`,
-      `${framing}, ${qualityPrefix} ${archClean}, holding iPhone up showing a skincare app screen front-facing, ${outfit}, phone screen glowing, person looking down at screen with slight relief, no makeup, ${realismAnchor}`,
-      `iPhone screen close-up held in hand, skincare app visible showing product recommendations, ${camera}, thumb scrolling, other hand partially visible, cosy indoor light, authentic phone screenshot feel`,
-      `${qualityPrefix} ${archClean}, lying in bed or on sofa, phone held above face showing skincare app screen, ${outfit}, screen reflecting light on face, casual evening scroll, no makeup, ${realismAnchor}`,
-      `iPhone propped against bathroom counter or mug showing skincare app routine screen, ${camera}, bathroom or kitchen background, hand adjusting phone, real home environment`,
+      `iPhone laid flat on wooden table, screen facing up clearly showing a skincare app called ${appName} with dark background and product recommendation cards visible, ${camera}, overhead angle, hand partially visible reaching in, cosy home surface, phone screen bright and readable`,
+      `close-up of iPhone screen held in hand, ${appName} skincare app clearly visible on screen with routine cards and product list, ${camera}, thumb on screen scrolling, other hand partially visible, indoor home light, screen clearly legible`,
+      `${qualityPrefix} ${archClean}, arm extended holding iPhone showing ${appName} app screen face-on, ${outfit}, phone screen clearly showing skincare routine app, person looking at screen with slight smile of relief, no makeup, indoor light, ${realismAnchor}`,
+      `iPhone propped against bathroom counter or mug, screen clearly showing ${appName} skincare app with product recommendations, ${camera}, bathroom background with skincare products visible, phone screen bright and clearly visible`,
+      `${qualityPrefix} ${archClean}, lying in bed phone held above face clearly showing ${appName} app on screen, ${outfit}, screen light glowing on face, scrolling through skincare recommendations at night, no makeup, ${realismAnchor}`,
     ];
     prompt = appScenarios[Math.floor(Math.random() * appScenarios.length)];
   } else {
@@ -1630,7 +1630,8 @@ async function generateSlide(i, hook, arch, falKey, acc, charUrl, hasLoRA) {
 
   const variant = styleVariants[i];
   const planEntry = slidePlan[i] || { type: 'selfie', scene: 'casual everyday home environment', skin_state: variant.style, text: i === 0 ? hook : variant.label };
-  const { prompt: fullPrompt, negativePrompt } = buildSlidePrompt(planEntry, variant.style, arch, hook, i);
+  const appNameVal = document.getElementById('app-name')?.value || 'Aureya';
+  const { prompt: fullPrompt, negativePrompt } = buildSlidePrompt(planEntry, variant.style, arch, hook, i, appNameVal);
   const isHumanShot = ['selfie','mirror','lifestyle','skin_close','face','skin','before_after','app','product'].includes(planEntry.type);
 
   setLog(`Slide ${i + 1}: ${planEntry.type} — ${(planEntry.scene||'').slice(0,50)}...`);
@@ -2728,7 +2729,8 @@ Return ONLY a JSON array of exactly 6 objects:
       const beforeExtras = document.getElementById('before-extras').value.trim();
       const styleDesc = isFirst ? variant.style + (beforeExtras ? ` Including: ${beforeExtras}.` : '') : variant.style;
       const planEntry = bulkPlan[i] || null;
-      const { prompt: slidePrompt } = buildSlidePrompt(planEntry, styleDesc, arch, hook, i);
+      const appNameBulk = document.getElementById('app-name')?.value || 'Aureya';
+      const { prompt: slidePrompt } = buildSlidePrompt(planEntry, styleDesc, arch, hook, i, appNameBulk);
       const rvBodyStr = buildRVBody(slidePrompt, null, hasLoRA, acc?.loraPath, acc?.loraTrigger, i);
       const rvBody = JSON.parse(rvBodyStr);
 
