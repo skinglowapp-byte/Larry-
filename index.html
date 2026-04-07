@@ -1520,18 +1520,23 @@ CRITICAL INSIGHT: TikTok data shows most viewers leave before slide 4. You must 
 The product/resolution must be visible by slide 3 — not slide 5 or 6.
 This is a personal story first. The product is revealed as the solution, not promoted.
 
-STORY STRUCTURE (6-slide arc — no setup, straight into pain):
-- Slide 1: PAIN — no setup, no context. Raw physical reality. Skin problem visible and specific. Text = exact hook.
-- Slide 2: ESCALATION — failed attempts, getting worse, shame deepening. Show what they tried that didn't work. Text = 3-4 words, lowercase, raw. No app, no solution yet.
-- Slide 3: STRANGER/INSIGHT MOMENT — the unexpected person or realisation from the hook. The turning point. Do NOT reveal the outcome yet — tease it. No app mention.
-- Slide 4: REALISATION — they understand what was wrong. The "oh" moment. Skin starting to calm. Still no app name — build tension.
-- Slide 5: APP REVEAL — first time Aureya or the app is shown/mentioned. Show the app on the phone. Person looks relieved, curious, hopeful. NOT before this slide.
-- Slide 6: EMOTIONAL WIN — specific emotional resolution that closes the hook loop. NOT "results" language. Language like "for the first time I know what's triggering it" or "i actually looked forward to washing my face".
+STORY STRUCTURE (6-slide arc — max 3 person shots, rest are product/app):
+- Slide 1: PERSON — selfie, raw pain visible, skin problem specific. Text = exact hook. type: selfie or mirror
+- Slide 2: PERSON — escalation, emotional low, failed attempts. 3-4 words MAX. type: selfie or lifestyle
+- Slide 3: PRODUCT — show the products that weren't working laid out or held up. No person needed. type: product
+- Slide 4: APP — the discovery. Show the Aureya app screen. type: app (MANDATORY)
+- Slide 5: PERSON — visible improvement, relief on face, same environment as slide 1 for contrast. type: selfie or lifestyle
+- Slide 6: PERSON — confident outdoor or different environment, emotional win, closes the hook loop. type: selfie or lifestyle
+
+FACE VARIETY RULE (critical for realism):
+- Only slides 1, 2, 5, 6 show the person — maximum 4 person shots
+- Slides 3 and 4 must NEVER show the person's face — product flat lay or app screen only
+- This variety is what makes the slideshow look like a real person's camera roll not AI
 
 APP MENTION GATING (hard rule):
-- Do NOT mention Aureya, any app, or any product by name before slide 5
-- Slides 1-4 must build tension WITHOUT revealing the solution
-- The app reveal on slide 5 must feel earned, not advertised
+- Do NOT mention Aureya, any app, or any product by name before slide 4
+- Slides 1-3 must build tension WITHOUT revealing the solution
+- The app reveal on slide 4 must feel earned, not advertised
 
 PACING RULES (retention is everything — target >20% completion):
 - Slide 1 text = exact hook. No changes.
@@ -1573,10 +1578,14 @@ TEXT STYLE RULES (critical for authenticity):
 - Slide 6 closes the emotional loop from slide 1 — make it feel earned not advertised
 
 MANDATORY SLIDE TYPES (non-negotiable):
-- Slide 5 type MUST be "app" — no exceptions. This is the soft CTA. If you use any other type for slide 5 the output is invalid.
-- Slides 4 or 3 CAN optionally use "product" type to show what wasn't working before the app reveal
-- Slides 1, 2, 3 should use "selfie", "mirror", or "lifestyle" for variety
-- Slide 6 should use "selfie" or "lifestyle" — confident outdoor or wider shot
+- Slide 1: "selfie" or "mirror" — person in pain
+- Slide 2: "selfie" or "lifestyle" — person escalating
+- Slide 3: "product" — MUST be product type, no person
+- Slide 4: "app" — MUST be app type, no person. This is the CTA.
+- Slide 5: "selfie" or "lifestyle" — person showing improvement
+- Slide 6: "selfie" or "lifestyle" — person confident, outdoor if possible
+
+If you use a person-type (selfie/mirror/lifestyle) for slides 3 or 4, the output is INVALID.
 
 Return ONLY a JSON array of exactly 6 objects:
 [{"slide":1,"type":"selfie","scene":"arm extended selfie from below, bathroom background, harsh light","skin_state":"skin condition at this stage","text":"story text 3-8 words"},...]`;
@@ -1589,9 +1598,12 @@ Return ONLY a JSON array of exactly 6 objects:
     const planData = await planRes.json();
     const clean = (planData.content?.[0]?.text || '[]').replace(/```json|```/g,'').trim();
     slidePlan = JSON.parse(clean);
-    // Enforce slide 5 must be app type
-    if (slidePlan[4] && slidePlan[4].type !== 'app') {
-      slidePlan[4] = { ...slidePlan[4], type: 'app', scene: 'arm extended selfie holding phone showing skincare app screen' };
+    // Enforce slide 3=product, slide 4=app — no person shots allowed
+    if (slidePlan[2] && !['product'].includes(slidePlan[2].type)) {
+      slidePlan[2] = { ...slidePlan[2], type: 'product', scene: 'skincare products laid out on bathroom counter, overhead shot, products that were not working' };
+    }
+    if (slidePlan[3] && slidePlan[3].type !== 'app') {
+      slidePlan[3] = { ...slidePlan[3], type: 'app', scene: 'iPhone showing Aureya skincare app screen, phone on table or held up' };
     }
     setLog(`Story: ${slidePlan.map(s=>s.text?.slice(0,18)||s.type).join(' → ')}`, 'ok');
   } catch(e) {
@@ -1683,7 +1695,7 @@ async function generateSlide(i, hook, arch, falKey, acc, charUrl, hasLoRA) {
     const slideText = planEntry?.text || storyFallbacks[i] || '';
     let finalUrl = await compositeTextOnImage(currentUrl, slideText, i, variant.label);
 
-    // For app slide (slide 5), composite a real app UI overlay onto the image
+    // For app slide, composite a real app UI overlay onto the image
     if (planEntry?.type === 'app') {
       const appNameOverlay = document.getElementById('app-name')?.value || 'Aureya';
       finalUrl = await compositeAppOverlay(finalUrl, appNameOverlay);
@@ -2654,18 +2666,23 @@ CRITICAL INSIGHT: TikTok data shows most viewers leave before slide 4. You must 
 The product/resolution must be visible by slide 3 — not slide 5 or 6.
 This is a personal story first. The product is revealed as the solution, not promoted.
 
-STORY STRUCTURE (6-slide arc — no setup, straight into pain):
-- Slide 1: PAIN — no setup, no context. Raw physical reality. Skin problem visible and specific. Text = exact hook.
-- Slide 2: ESCALATION — failed attempts, getting worse, shame deepening. Show what they tried that didn't work. Text = 3-4 words, lowercase, raw. No app, no solution yet.
-- Slide 3: STRANGER/INSIGHT MOMENT — the unexpected person or realisation from the hook. The turning point. Do NOT reveal the outcome yet — tease it. No app mention.
-- Slide 4: REALISATION — they understand what was wrong. The "oh" moment. Skin starting to calm. Still no app name — build tension.
-- Slide 5: APP REVEAL — first time Aureya or the app is shown/mentioned. Show the app on the phone. Person looks relieved, curious, hopeful. NOT before this slide.
-- Slide 6: EMOTIONAL WIN — specific emotional resolution that closes the hook loop. NOT "results" language. Language like "for the first time I know what's triggering it" or "i actually looked forward to washing my face".
+STORY STRUCTURE (6-slide arc — max 3 person shots, rest are product/app):
+- Slide 1: PERSON — selfie, raw pain visible, skin problem specific. Text = exact hook. type: selfie or mirror
+- Slide 2: PERSON — escalation, emotional low, failed attempts. 3-4 words MAX. type: selfie or lifestyle
+- Slide 3: PRODUCT — show the products that weren't working laid out or held up. No person needed. type: product
+- Slide 4: APP — the discovery. Show the Aureya app screen. type: app (MANDATORY)
+- Slide 5: PERSON — visible improvement, relief on face, same environment as slide 1 for contrast. type: selfie or lifestyle
+- Slide 6: PERSON — confident outdoor or different environment, emotional win, closes the hook loop. type: selfie or lifestyle
+
+FACE VARIETY RULE (critical for realism):
+- Only slides 1, 2, 5, 6 show the person — maximum 4 person shots
+- Slides 3 and 4 must NEVER show the person's face — product flat lay or app screen only
+- This variety is what makes the slideshow look like a real person's camera roll not AI
 
 APP MENTION GATING (hard rule):
-- Do NOT mention Aureya, any app, or any product by name before slide 5
-- Slides 1-4 must build tension WITHOUT revealing the solution
-- The app reveal on slide 5 must feel earned, not advertised
+- Do NOT mention Aureya, any app, or any product by name before slide 4
+- Slides 1-3 must build tension WITHOUT revealing the solution
+- The app reveal on slide 4 must feel earned, not advertised
 
 PACING RULES (retention is everything — target >20% completion):
 - Slide 1 text = exact hook. No changes.
@@ -2707,19 +2724,26 @@ TEXT STYLE RULES (critical for authenticity):
 - Slide 6 closes the emotional loop from slide 1 — make it feel earned not advertised
 
 MANDATORY SLIDE TYPES (non-negotiable):
-- Slide 5 type MUST be "app" — no exceptions. This is the soft CTA. If you use any other type for slide 5 the output is invalid.
-- Slides 4 or 3 CAN optionally use "product" type to show what wasn't working before the app reveal
-- Slides 1, 2, 3 should use "selfie", "mirror", or "lifestyle" for variety
-- Slide 6 should use "selfie" or "lifestyle" — confident outdoor or wider shot
+- Slide 1: "selfie" or "mirror" — person in pain
+- Slide 2: "selfie" or "lifestyle" — person escalating
+- Slide 3: "product" — MUST be product type, no person
+- Slide 4: "app" — MUST be app type, no person. This is the CTA.
+- Slide 5: "selfie" or "lifestyle" — person showing improvement
+- Slide 6: "selfie" or "lifestyle" — person confident, outdoor if possible
+
+If you use a person-type (selfie/mirror/lifestyle) for slides 3 or 4, the output is INVALID.
 
 Return ONLY a JSON array of exactly 6 objects:
 [{"slide":1,"type":"selfie","scene":"arm extended selfie from below, bathroom background, harsh light","skin_state":"skin condition at this stage","text":"story text 3-8 words"},...]` }] })
       });
       const planData = await planRes.json();
       bulkPlan = JSON.parse((planData.content?.[0]?.text || '[]').replace(/\`\`\`json|\`\`\`/g,'').trim());
-      // Enforce slide 5 must be app type
-      if (bulkPlan[4] && bulkPlan[4].type !== 'app') {
-        bulkPlan[4] = { ...bulkPlan[4], type: 'app', scene: 'arm extended selfie holding phone showing skincare app screen' };
+      // Enforce slide 3=product, slide 4=app
+      if (bulkPlan[2] && !['product'].includes(bulkPlan[2].type)) {
+        bulkPlan[2] = { ...bulkPlan[2], type: 'product', scene: 'skincare products laid out on bathroom counter, overhead shot, products that were not working' };
+      }
+      if (bulkPlan[3] && bulkPlan[3].type !== 'app') {
+        bulkPlan[3] = { ...bulkPlan[3], type: 'app', scene: 'iPhone showing Aureya skincare app screen, phone on table or held up' };
       }
     } catch(e) {
       bulkLog('  Plan failed, using fallback scenes', 'err');
