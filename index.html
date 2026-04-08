@@ -1211,7 +1211,7 @@ function displayTemplateHooks(hooks) {
   const container = document.getElementById('template-hooks-display');
   
   let html = '<div style="margin-top:12px;">';
-  html += '<div style="font-size:12px;color:#999;margin-bottom:12px;">✓ Batch generated — copy any hook to use it</div>';
+  html += '<div style="font-size:12px;color:#999;margin-bottom:12px;">✓ Batch generated — click any hook to copy</div>';
   
   const byTemplate = {};
   hooks.forEach(h => {
@@ -1224,9 +1224,10 @@ function displayTemplateHooks(hooks) {
     html += `<div style="margin-bottom:14px;">`;
     html += `<div style="font-weight:500;margin-bottom:8px;color:var(--white);"><span style="font-size:16px;margin-right:6px;">${first.templateIcon}</span>Template ${key}: ${first.templateName}</div>`;
     
-    items.forEach(item => {
+    items.forEach((item, idx) => {
       const varStr = Object.values(item.variation).join(' · ');
-      html += `<div style="margin:6px 0;padding:8px;background:rgba(255,255,255,0.03);border-radius:4px;border-left:2px solid var(--accent);cursor:pointer;font-size:13px;" onclick="copyToClip('${item.hook.replace(/'/g, "\\'")}')">`;
+      const hookId = `hook-${Date.now()}-${idx}`;
+      html += `<div style="margin:6px 0;padding:8px;background:rgba(255,255,255,0.03);border-radius:4px;border-left:2px solid var(--accent);cursor:pointer;font-size:13px;" data-hook-text="${item.hook.replace(/"/g, '&quot;')}" onclick="copyHookFromElement(this)">`;
       html += `<div style="color:#999;font-size:10px;margin-bottom:3px;">• ${varStr}</div>`;
       html += `<div>${item.hook}</div>`;
       html += `<div style="font-size:10px;color:var(--accent);margin-top:4px;">click to copy</div>`;
@@ -1240,9 +1241,12 @@ function displayTemplateHooks(hooks) {
   container.innerHTML = html;
 }
 
-function copyToClip(text) {
+function copyHookFromElement(el) {
+  const text = el.getAttribute('data-hook-text');
   navigator.clipboard.writeText(text).then(() => {
     showToast('Hook copied to clipboard', 'success');
+  }).catch(err => {
+    showToast('Failed to copy: ' + err.message, 'error');
   });
 }
 
