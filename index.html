@@ -651,6 +651,16 @@
         <div id="selected-hook-text" style="font-size:16px;font-weight:500;line-height:1.5;margin-bottom:12px;"></div>
         <button class="btn btn-primary" onclick="nav('generate')">Use this hook → Generate slideshow</button>
       </div>
+
+      <div class="card" style="margin-top:20px;background:rgba(200,255,90,0.08);border:1px solid rgba(200,255,90,0.2);">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:20px;">📊</span>
+          <div class="card-title" style="margin:0;">Content Template System</div>
+        </div>
+        <p style="font-size:13px;color:#999;margin-bottom:14px;line-height:1.6;">Generate batch hooks across 5 proven templates to scale your UGC production. Each template has 5 variations for maximum content diversity.</p>
+        <button class="btn btn-primary" onclick="generateTemplateHooks()" style="width:100%;">⟳ Generate 10 Template-Based Hooks</button>
+        <div id="template-hooks-display" style="margin-top:16px;"></div>
+      </div>
     </div>
 
     <!-- GENERATE PANE -->
@@ -1052,6 +1062,190 @@ function resetStyles() {
 }
 renderStyleInputs();
 
+// ─── TEMPLATE SYSTEM ──────────────────────────────────────────────────────────
+const CONTENT_TEMPLATES = {
+  A: {
+    name: 'POV: Problem → Solution',
+    icon: '💼',
+    variations: [
+      { scenario: 'work meeting', emoji: '💼' },
+      { scenario: 'on a date', emoji: '💕' },
+      { scenario: 'at the gym', emoji: '💪' },
+      { scenario: 'family dinner', emoji: '🍽️' },
+      { scenario: 'video call', emoji: '📹' }
+    ]
+  },
+  B: {
+    name: 'Ingredient Myth-Bust',
+    icon: '🔬',
+    variations: [
+      { ingredient: 'ceramides', claim: 'only in expensive creams' },
+      { ingredient: 'retinol', claim: 'always causes irritation' },
+      { ingredient: 'niacinamide', claim: 'just a filler' },
+      { ingredient: 'fragrance-free', claim: 'means it smells bad' },
+      { ingredient: 'hyaluronic acid', claim: 'only works in humid air' }
+    ]
+  },
+  C: {
+    name: 'Before/After Routine',
+    icon: '✨',
+    variations: [
+      { time: 'morning routine', duration: '2 min' },
+      { time: 'nighttime routine', duration: '5 min' },
+      { time: 'quick fix routine', duration: '30 sec' },
+      { time: 'full 10-step routine', duration: '10 min' },
+      { time: 'emergency routine', duration: '3 min' }
+    ]
+  },
+  D: {
+    name: 'Day in the Life',
+    icon: '🌅',
+    variations: [
+      { skinType: 'oily + sensitive' },
+      { skinType: 'dry + sensitive' },
+      { skinType: 'reactive + sensitive' },
+      { skinType: 'dehydrated + sensitive' },
+      { skinType: 'combination + sensitive' }
+    ]
+  },
+  E: {
+    name: '3 Things Derms Wish You Knew',
+    icon: '👩‍⚕️',
+    variations: [
+      { topic: 'inflammation & barrier health' },
+      { topic: 'product layering & absorption' },
+      { topic: 'irritant identification' },
+      { topic: 'seasonal skin transitions' },
+      { topic: 'sensitive skin myths' }
+    ]
+  }
+};
+
+async function generateTemplateHooks() {
+  if (!getAnthropicKey()) {
+    showToast('Anthropic API key required in Setup', 'error');
+    nav('setup');
+    return;
+  }
+
+  const btn = event.target;
+  btn.disabled = true;
+  const origText = btn.textContent;
+  btn.textContent = '⟳ Generating...';
+
+  try {
+    const allHooks = [];
+    const appName = document.getElementById('app-name').value || 'Aureya';
+    const appAudience = document.getElementById('app-audience').value || 'women with sensitive skin';
+    
+    // For each template, generate 2 hooks from random variations
+    for (const [templateKey, template] of Object.entries(CONTENT_TEMPLATES)) {
+      const selectedVars = template.variations.sort(() => Math.random() - 0.5).slice(0, 2);
+      
+      for (const variation of selectedVars) {
+        // Build prompt based on variation type
+        let varStr = '';
+        if (variation.scenario) varStr = `during a ${variation.scenario}`;
+        else if (variation.ingredient) varStr = `myth-busting: "${variation.ingredient} — ${variation.claim}"`;
+        else if (variation.time) varStr = `a ${variation.time} (${variation.duration})`;
+        else if (variation.skinType) varStr = `managing ${variation.skinType} skin`;
+        else if (variation.topic) varStr = `about ${variation.topic}`;
+
+        const prompt = `Generate ONE viral TikTok hook for ${appName} (skincare app for ${appAudience}) for a "${template.name}" content piece ${varStr}. 
+
+Hook must be:
+- 5-12 words max
+- Start with action or emotional hook
+- Create curiosity gap (end mid-story)
+- Specific and relatable
+- No marketing jargon
+
+Return only the hook text, nothing else.`;
+
+        const response = await fetch('/api/claude', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-anthropic-key': getAnthropicKey()
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 150,
+            messages: [{ role: 'user', content: prompt }]
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.error?.message || 'API error');
+        }
+        
+        const data = await response.json();
+        const hook = data.content[0].text.trim();
+        
+        allHooks.push({
+          template: templateKey,
+          templateName: template.name,
+          templateIcon: template.icon,
+          variation: variation,
+          hook: hook
+        });
+      }
+      
+      // Small delay between template requests
+      await new Promise(r => setTimeout(r, 300));
+    }
+    
+    displayTemplateHooks(allHooks);
+    showToast(`✓ Generated ${allHooks.length} hooks across 5 templates`, 'success');
+  } catch (error) {
+    showToast('Error: ' + error.message, 'error');
+    console.error(error);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = origText;
+  }
+}
+
+function displayTemplateHooks(hooks) {
+  const container = document.getElementById('template-hooks-display');
+  
+  let html = '<div style="margin-top:12px;">';
+  html += '<div style="font-size:12px;color:#999;margin-bottom:12px;">✓ Batch generated — copy any hook to use it</div>';
+  
+  const byTemplate = {};
+  hooks.forEach(h => {
+    if (!byTemplate[h.template]) byTemplate[h.template] = [];
+    byTemplate[h.template].push(h);
+  });
+  
+  Object.entries(byTemplate).forEach(([key, items]) => {
+    const first = items[0];
+    html += `<div style="margin-bottom:14px;">`;
+    html += `<div style="font-weight:500;margin-bottom:8px;color:var(--white);"><span style="font-size:16px;margin-right:6px;">${first.templateIcon}</span>Template ${key}: ${first.templateName}</div>`;
+    
+    items.forEach(item => {
+      const varStr = Object.values(item.variation).join(' · ');
+      html += `<div style="margin:6px 0;padding:8px;background:rgba(255,255,255,0.03);border-radius:4px;border-left:2px solid var(--accent);cursor:pointer;font-size:13px;" onclick="copyToClip('${item.hook.replace(/'/g, "\\'")}')">`;
+      html += `<div style="color:#999;font-size:10px;margin-bottom:3px;">• ${varStr}</div>`;
+      html += `<div>${item.hook}</div>`;
+      html += `<div style="font-size:10px;color:var(--accent);margin-top:4px;">click to copy</div>`;
+      html += `</div>`;
+    });
+    
+    html += `</div>`;
+  });
+  
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function copyToClip(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Hook copied to clipboard', 'success');
+  });
+}
+
 // ─── HOOKS ────────────────────────────────────────────────────────────────────
 function syncHookContext() {
   const name = document.getElementById('app-name').value || '[app name]';
@@ -1118,7 +1312,7 @@ Generate ${count} unique hooks. Each must start with "I" or "My", contain physic
         'x-anthropic-key': getAnthropicKey()
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1000,
         messages: [{ role: 'user', content: prompt }]
       })
@@ -1593,7 +1787,7 @@ Return ONLY a JSON array of exactly 6 objects:
     const planRes = await fetch('/api/claude', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-anthropic-key': getAnthropicKey() },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1500, messages: [{ role: 'user', content: planPrompt }] })
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: planPrompt }] })
     });
     const planData = await planRes.json();
     const clean = (planData.content?.[0]?.text || '[]').replace(/```json|```/g,'').trim();
@@ -1758,7 +1952,7 @@ Return ONLY the caption text followed by hashtags. No preamble.`;
         'x-anthropic-key': getAnthropicKey()
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 400,
         messages: [{ role: 'user', content: prompt }]
       })
@@ -2146,7 +2340,7 @@ async function generateSlideTexts() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-anthropic-key': antKey },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1500,
         messages: [{ role: 'user', content: `You are planning a viral TikTok skincare slideshow that tells a story across 6 slides.
 
@@ -2284,7 +2478,7 @@ async function generateCharacter() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-anthropic-key': antKey },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 80,
         messages: [{ role: 'user', content: `Write a short physical description for an AI portrait subject. Base: ${vibeMap[vibe]}. Vary the specific hair shade, eye colour, and one distinguishing feature (e.g. subtle freckles, soft jawline, arched brows). Return ONLY the descriptor, under 25 words, no intro.` }]
       })
@@ -2598,7 +2792,7 @@ async function bulkGenerate() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-anthropic-key': getAnthropicKey() },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-6',
           max_tokens: 1000,
           messages: [{ role: 'user', content: `You are a viral TikTok content strategist for sensitive skincare (eczema/rosacea).
 
@@ -2656,7 +2850,7 @@ Return ONLY a JSON array of strings. No preamble, no markdown.` }]
       const planRes = await fetch('/api/claude', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-anthropic-key': getAnthropicKey() },
-        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1500, messages: [{ role: 'user', content: `Plan a 6-slide TikTok skincare story slideshow.
+        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: `Plan a 6-slide TikTok skincare story slideshow.
 
 Hook: "${hook}"
 App: ${appName} — AI skincare for sensitive/eczema/rosacea skin
@@ -2825,7 +3019,7 @@ async function getTextPlacement(text, slideIndex, slideLabel) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-anthropic-key': getAnthropicKey() },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 100,
         messages: [{ role: 'user', content: `You are placing text on a TikTok skincare slideshow photo. 
 
