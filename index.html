@@ -807,8 +807,20 @@
           <button onclick="generateCharacter()" id="gen-char-btn" class="btn btn-primary" style="flex:1;">✦ Generate character</button>
         </div>
 
+        <div style="display:flex;align-items:center;gap:10px;margin-top:12px;">
+          <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
+          <span style="font-size:11px;color:var(--muted);white-space:nowrap;">or upload your own</span>
+          <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
+        </div>
+
+        <label for="char-upload-input" id="char-upload-label" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;padding:10px 14px;border:1.5px dashed rgba(200,255,90,0.3);border-radius:var(--border-radius-md);cursor:pointer;font-size:13px;color:rgba(245,242,236,0.65);transition:border-color 0.2s,color 0.2s;" onmouseover="this.style.borderColor='rgba(200,255,90,0.6)';this.style.color='var(--accent)';" onmouseout="this.style.borderColor='rgba(200,255,90,0.3)';this.style.color='rgba(245,242,236,0.65)';">
+          <span style="font-size:16px;">↑</span> Upload base character photo
+        </label>
+        <input type="file" id="char-upload-input" accept="image/*" style="display:none;" onchange="handleCharacterUpload(event)" />
+        <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:5px;">JPG/PNG · face clearly visible · will be used as-is for IP-Adapter</div>
+
         <div id="char-preview" style="display:none;margin-top:14px;">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-family:DM Mono,monospace;">GENERATED CHARACTER — will be used for all slides</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-family:DM Mono,monospace;" id="char-preview-label">GENERATED CHARACTER — will be used for all slides</div>
           <img id="char-preview-img" style="width:120px;height:160px;object-fit:cover;border-radius:var(--border-radius-md);border:2px solid var(--accent);" />
           <div style="font-size:12px;color:var(--accent);margin-top:6px;">✓ Character locked — save account to use this face</div>
           <button onclick="saveCharacterToAccount()" class="btn btn-primary" style="width:100%;margin-top:10px;">Save account with this character</button>
@@ -2445,6 +2457,33 @@ let pendingCharacterDesc = '';
 let slidePlan = [];
 let selectedAccountIndex = null;
 
+function handleCharacterUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { showToast('Please upload an image file', 'error'); return; }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    pendingCharacterUrl = e.target.result; // base64 data URL
+    pendingCharacterDesc = 'User-uploaded base character';
+
+    const label = document.getElementById('char-upload-label');
+    label.innerHTML = `<span style="font-size:16px;">✓</span> ${file.name}`;
+    label.style.borderColor = 'rgba(200,255,90,0.6)';
+    label.style.color = 'var(--accent)';
+
+    const previewLabel = document.getElementById('char-preview-label');
+    if (previewLabel) previewLabel.textContent = 'UPLOADED CHARACTER — will be used for all slides';
+
+    document.getElementById('char-preview-img').src = pendingCharacterUrl;
+    document.getElementById('char-preview').style.display = 'block';
+
+    showToast('Character uploaded — save account to use this face', 'success');
+  };
+  reader.onerror = () => showToast('Failed to read image', 'error');
+  reader.readAsDataURL(file);
+}
+
 async function generateCharacter() {
   const skinType = document.getElementById('character-skin').value;
   const vibe = document.getElementById('character-vibe').value;
@@ -3075,59 +3114,248 @@ async function compositeAppOverlay(imageUrl, appName) {
       const W = canvas.width;
       const H = canvas.height;
 
-      // Card — centered lower third
-      const cardW = W * 0.78;
-      const cardH = H * 0.22;
-      const cardX = (W - cardW) / 2;
-      const cardY = H * 0.56;
-      const r = cardW * 0.05;
+      // ── Phone mockup in lower-right corner ──────────────────────────
+      const phoneW  = W * 0.42;
+      const phoneH  = phoneW * 2.1;           // ~iPhone aspect ratio
+      const phoneX  = W * 0.54;
+      const phoneY  = H * 0.46;
+      const pR      = phoneW * 0.09;          // outer corner radius
 
-      // Dark rounded card
+      // Drop shadow
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.55)';
+      ctx.shadowBlur  = phoneW * 0.18;
+      ctx.shadowOffsetX = phoneW * 0.03;
+      ctx.shadowOffsetY = phoneW * 0.06;
+
+      // Phone body
+      ctx.beginPath();
+      ctx.moveTo(phoneX + pR, phoneY);
+      ctx.lineTo(phoneX + phoneW - pR, phoneY);
+      ctx.quadraticCurveTo(phoneX + phoneW, phoneY, phoneX + phoneW, phoneY + pR);
+      ctx.lineTo(phoneX + phoneW, phoneY + phoneH - pR);
+      ctx.quadraticCurveTo(phoneX + phoneW, phoneY + phoneH, phoneX + phoneW - pR, phoneY + phoneH);
+      ctx.lineTo(phoneX + pR, phoneY + phoneH);
+      ctx.quadraticCurveTo(phoneX, phoneY + phoneH, phoneX, phoneY + phoneH - pR);
+      ctx.lineTo(phoneX, phoneY + pR);
+      ctx.quadraticCurveTo(phoneX, phoneY, phoneX + pR, phoneY);
+      ctx.closePath();
+      ctx.fillStyle = '#111111';
+      ctx.fill();
+      ctx.restore();
+
+      // Phone border / bezel
       ctx.save();
       ctx.beginPath();
-      ctx.moveTo(cardX + r, cardY);
-      ctx.lineTo(cardX + cardW - r, cardY);
-      ctx.quadraticCurveTo(cardX + cardW, cardY, cardX + cardW, cardY + r);
-      ctx.lineTo(cardX + cardW, cardY + cardH - r);
-      ctx.quadraticCurveTo(cardX + cardW, cardY + cardH, cardX + cardW - r, cardY + cardH);
-      ctx.lineTo(cardX + r, cardY + cardH);
-      ctx.quadraticCurveTo(cardX, cardY + cardH, cardX, cardY + cardH - r);
-      ctx.lineTo(cardX, cardY + r);
-      ctx.quadraticCurveTo(cardX, cardY, cardX + r, cardY);
+      ctx.moveTo(phoneX + pR, phoneY);
+      ctx.lineTo(phoneX + phoneW - pR, phoneY);
+      ctx.quadraticCurveTo(phoneX + phoneW, phoneY, phoneX + phoneW, phoneY + pR);
+      ctx.lineTo(phoneX + phoneW, phoneY + phoneH - pR);
+      ctx.quadraticCurveTo(phoneX + phoneW, phoneY + phoneH, phoneX + phoneW - pR, phoneY + phoneH);
+      ctx.lineTo(phoneX + pR, phoneY + phoneH);
+      ctx.quadraticCurveTo(phoneX, phoneY + phoneH, phoneX, phoneY + phoneH - pR);
+      ctx.lineTo(phoneX, phoneY + pR);
+      ctx.quadraticCurveTo(phoneX, phoneY, phoneX + pR, phoneY);
       ctx.closePath();
-      ctx.fillStyle = 'rgba(8,8,8,0.85)';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+      ctx.lineWidth = phoneW * 0.025;
       ctx.stroke();
       ctx.restore();
 
-      // App name
-      ctx.textAlign = 'center';
-      ctx.shadowColor = 'rgba(0,0,0,0.6)';
-      ctx.shadowBlur = 10;
-      ctx.font = `700 ${cardH * 0.24}px -apple-system, "DM Sans", sans-serif`;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(appName, W / 2, cardY + cardH * 0.32);
+      // Screen inset
+      const sInset = phoneW * 0.05;
+      const sTopInset = phoneH * 0.055;
+      const sBotInset = phoneH * 0.055;
+      const sX = phoneX + sInset;
+      const sY = phoneY + sTopInset;
+      const sW = phoneW - sInset * 2;
+      const sH = phoneH - sTopInset - sBotInset;
+      const sR = pR * 0.6;
 
-      // Tagline
-      ctx.shadowBlur = 0;
-      ctx.font = `400 ${cardH * 0.14}px -apple-system, "DM Sans", sans-serif`;
-      ctx.fillStyle = 'rgba(255,255,255,0.6)';
-      ctx.fillText('AI skincare · sensitive skin', W / 2, cardY + cardH * 0.52);
-
-      // Divider
+      // Screen clip
+      ctx.save();
       ctx.beginPath();
-      ctx.moveTo(cardX + cardW * 0.15, cardY + cardH * 0.63);
-      ctx.lineTo(cardX + cardW * 0.85, cardY + cardH * 0.63);
-      ctx.strokeStyle = 'rgba(200,255,90,0.5)';
+      ctx.moveTo(sX + sR, sY);
+      ctx.lineTo(sX + sW - sR, sY);
+      ctx.quadraticCurveTo(sX + sW, sY, sX + sW, sY + sR);
+      ctx.lineTo(sX + sW, sY + sH - sR);
+      ctx.quadraticCurveTo(sX + sW, sY + sH, sX + sW - sR, sY + sH);
+      ctx.lineTo(sX + sR, sY + sH);
+      ctx.quadraticCurveTo(sX, sY + sH, sX, sY + sH - sR);
+      ctx.lineTo(sX, sY + sR);
+      ctx.quadraticCurveTo(sX, sY, sX + sR, sY);
+      ctx.closePath();
+      ctx.clip();
+
+      // Screen background — Aureya app gradient
+      const grad = ctx.createLinearGradient(sX, sY, sX, sY + sH);
+      grad.addColorStop(0,   '#0d0d0d');
+      grad.addColorStop(0.4, '#111a10');
+      grad.addColorStop(1,   '#0a150a');
+      ctx.fillStyle = grad;
+      ctx.fillRect(sX, sY, sW, sH);
+
+      // Status bar dots (tiny)
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.font = `${sW * 0.07}px -apple-system, sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.fillText('9:41', sX + sW * 0.06, sY + sH * 0.055);
+      ctx.textAlign = 'right';
+      ctx.fillText('●●●', sX + sW * 0.94, sY + sH * 0.055);
+
+      // App wordmark
+      ctx.textAlign = 'center';
+      ctx.font = `700 ${sW * 0.17}px Georgia, serif`;
+      ctx.fillStyle = '#c8ff5a';
+      ctx.shadowColor = 'rgba(200,255,90,0.4)';
+      ctx.shadowBlur = sW * 0.08;
+      ctx.fillText(appName, sX + sW / 2, sY + sH * 0.16);
+      ctx.shadowBlur = 0;
+
+      // Tagline under wordmark
+      ctx.font = `400 ${sW * 0.09}px -apple-system, sans-serif`;
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.fillText('AI skincare for sensitive skin', sX + sW / 2, sY + sH * 0.225);
+
+      // Fake skin scan card
+      const cX = sX + sW * 0.08;
+      const cY = sY + sH * 0.27;
+      const cW = sW * 0.84;
+      const cH = sH * 0.28;
+      const cR = sW * 0.05;
+      ctx.beginPath();
+      ctx.moveTo(cX + cR, cY);
+      ctx.lineTo(cX + cW - cR, cY);
+      ctx.quadraticCurveTo(cX + cW, cY, cX + cW, cY + cR);
+      ctx.lineTo(cX + cW, cY + cH - cR);
+      ctx.quadraticCurveTo(cX + cW, cY + cH, cX + cW - cR, cY + cH);
+      ctx.lineTo(cX + cR, cY + cH);
+      ctx.quadraticCurveTo(cX, cY + cH, cX, cY + cH - cR);
+      ctx.lineTo(cX, cY + cR);
+      ctx.quadraticCurveTo(cX, cY, cX + cR, cY);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(200,255,90,0.08)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(200,255,90,0.25)';
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      // CTA
-      ctx.font = `600 ${cardH * 0.16}px -apple-system, "DM Sans", sans-serif`;
+      // Scan icon (circle with cross hairs)
+      const icX = sX + sW * 0.3;
+      const icY = cY + cH * 0.38;
+      const icR = sW * 0.08;
+      ctx.beginPath();
+      ctx.arc(icX, icY, icR, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(200,255,90,0.6)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(icX - icR * 0.6, icY);
+      ctx.lineTo(icX + icR * 0.6, icY);
+      ctx.moveTo(icX, icY - icR * 0.6);
+      ctx.lineTo(icX, icY + icR * 0.6);
+      ctx.stroke();
+
+      ctx.textAlign = 'left';
+      ctx.font = `600 ${sW * 0.1}px -apple-system, sans-serif`;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('Skin Analysis', sX + sW * 0.44, cY + cH * 0.33);
+      ctx.font = `400 ${sW * 0.08}px -apple-system, sans-serif`;
+      ctx.fillStyle = 'rgba(200,255,90,0.8)';
+      ctx.fillText('Scan now →', sX + sW * 0.44, cY + cH * 0.55);
+
+      // Barrier score bar
+      ctx.textAlign = 'left';
+      ctx.font = `400 ${sW * 0.08}px -apple-system, sans-serif`;
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.fillText('Barrier score', sX + sW * 0.1, cY + cH * 0.8);
+      ctx.fillStyle = 'rgba(200,255,90,0.9)';
+      ctx.fillText('74 / 100', sX + sW * 0.56, cY + cH * 0.8);
+
+      // Two mini product pills
+      const pill = (px, py, label) => {
+        const pw = sW * 0.38, ph = sH * 0.065, pr = ph / 2;
+        ctx.beginPath();
+        ctx.moveTo(px + pr, py);
+        ctx.lineTo(px + pw - pr, py);
+        ctx.quadraticCurveTo(px + pw, py, px + pw, py + pr);
+        ctx.lineTo(px + pw, py + ph - pr);
+        ctx.quadraticCurveTo(px + pw, py + ph, px + pw - pr, py + ph);
+        ctx.lineTo(px + pr, py + ph);
+        ctx.quadraticCurveTo(px, py + ph, px, py + ph - pr);
+        ctx.lineTo(px, py + pr);
+        ctx.quadraticCurveTo(px, py, px + pr, py);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(255,255,255,0.07)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+        ctx.textAlign = 'center';
+        ctx.font = `500 ${sW * 0.078}px -apple-system, sans-serif`;
+        ctx.fillStyle = 'rgba(255,255,255,0.75)';
+        ctx.fillText(label, px + pw / 2, py + ph * 0.67);
+      };
+      pill(sX + sW * 0.06, cY + cH + sH * 0.03, 'Routine');
+      pill(sX + sW * 0.55, cY + cH + sH * 0.03, 'Products');
+
+      // Bottom nav bar
+      const navY = sY + sH * 0.88;
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      ctx.fillRect(sX, navY, sW, sH * 0.12);
+      const navIcons = ['⌂', '◎', '☆', '⚙'];
+      navIcons.forEach((ic, i) => {
+        ctx.textAlign = 'center';
+        ctx.font = `${sW * 0.11}px -apple-system, sans-serif`;
+        ctx.fillStyle = i === 0 ? '#c8ff5a' : 'rgba(255,255,255,0.3)';
+        ctx.fillText(ic, sX + sW * (0.15 + i * 0.23), navY + sH * 0.075);
+      });
+
+      ctx.restore(); // end screen clip
+
+      // Dynamic island / notch pill
+      ctx.save();
+      ctx.fillStyle = '#000000';
+      ctx.beginPath();
+      const diW = phoneW * 0.35, diH = phoneH * 0.022;
+      const diX = phoneX + (phoneW - diW) / 2;
+      const diY = phoneY + phoneH * 0.008;
+      ctx.roundRect(diX, diY, diW, diH, diH / 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Power button (right side)
+      ctx.save();
+      ctx.fillStyle = '#222222';
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = 1;
+      const btnH = phoneH * 0.1;
+      ctx.beginPath();
+      ctx.roundRect(phoneX + phoneW - 3, phoneY + phoneH * 0.28, 4, btnH, 2);
+      ctx.fill(); ctx.stroke();
+      ctx.restore();
+
+      // Volume buttons (left side)
+      [0.18, 0.27].forEach(offset => {
+        ctx.save();
+        ctx.fillStyle = '#222222';
+        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(phoneX - 3, phoneY + phoneH * offset, 4, phoneH * 0.07, 2);
+        ctx.fill(); ctx.stroke();
+        ctx.restore();
+      });
+
+      // "link in bio ↑" text label above phone
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.font = `700 ${W * 0.042}px -apple-system, "DM Sans", sans-serif`;
       ctx.fillStyle = '#c8ff5a';
-      ctx.fillText('link in bio ↑', W / 2, cardY + cardH * 0.84);
+      ctx.shadowColor = 'rgba(0,0,0,0.7)';
+      ctx.shadowBlur = 12;
+      ctx.fillText('link in bio ↑', phoneX + phoneW / 2, phoneY - H * 0.02);
+      ctx.restore();
 
       resolve(canvas.toDataURL('image/jpeg', 0.88));
     };
