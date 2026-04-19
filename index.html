@@ -3478,6 +3478,43 @@ async function compositeTextOnImage(imageUrl, text, slideIndex, slideLabel) {
         ctx.fillText(l, xAnchor, startY + li * lineHeight);
       });
 
+      // ── Stage label pill (e.g. "Week 1 — calming") ───────────────────
+      if (slideLabel && slideLabel.trim()) {
+        const labelFontSize = Math.round(canvasW * 0.038);
+        ctx.font = `600 ${labelFontSize}px -apple-system, "Helvetica Neue", Arial, sans-serif`;
+        const labelText = slideLabel.trim();
+        const textW = ctx.measureText(labelText).width;
+        const padX = labelFontSize * 0.9;
+        const padY = labelFontSize * 0.55;
+        const pillW = textW + padX * 2;
+        const pillH = labelFontSize + padY * 2;
+        const pillX = (canvasW - pillW) / 2;
+        const pillY = canvasH * 0.895 - pillH / 2;
+        const pillR = pillH / 2;
+
+        // Pill background
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(8,8,8,0.72)';
+        ctx.beginPath();
+        ctx.moveTo(pillX + pillR, pillY);
+        ctx.lineTo(pillX + pillW - pillR, pillY);
+        ctx.quadraticCurveTo(pillX + pillW, pillY, pillX + pillW, pillY + pillR);
+        ctx.lineTo(pillX + pillW, pillY + pillH - pillR);
+        ctx.quadraticCurveTo(pillX + pillW, pillY + pillH, pillX + pillW - pillR, pillY + pillH);
+        ctx.lineTo(pillX + pillR, pillY + pillH);
+        ctx.quadraticCurveTo(pillX, pillY + pillH, pillX, pillY + pillH - pillR);
+        ctx.lineTo(pillX, pillY + pillR);
+        ctx.quadraticCurveTo(pillX, pillY, pillX + pillR, pillY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Pill text
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(245,242,236,0.9)';
+        ctx.fillText(labelText, canvasW / 2, pillY + padY + labelFontSize * 0.85);
+      }
+
       resolve(canvas.toDataURL('image/jpeg', 0.85));
     };
     img.onerror = () => resolve(imageUrl);
