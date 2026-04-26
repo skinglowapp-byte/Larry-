@@ -1,118 +1,3842 @@
-// /api/upload-slides.js
-// Uploads base64 data URLs (images or audio) to Vercel Blob.
-// Returns public URLs that can be passed to TikTok PULL_FROM_URL or FAL sync-lipsync.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="tiktok-developers-site-verification" content="cbojdAGxrgB0Yxw4LR7Jy75b14mn4bej" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Larry — TikTok Slideshow Automator</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAADxElEQVR4nK1WTW8cRRB9Vd29M/vlLyIi9gBRDkTCHCLlAFwczgGkiD9gRVw48A/IhSM/AAmJE/8AFDiDxIl7FA6g2LFQjISEv3Y8O9vdVRx6Y4/tXtuxUhqtZna63quqVz3VBACAtbYsS2bGqzARqes6xgiAEnqv1yMiVX0lBAmqqqoYIwPodDqvEB2AqhJRURQAGAAzt9FVMkxEp68MbstRVVPBTxedCJ2uSTfplxnEBIWevIiI+XgZgE7XnCU+QaAKNjRYdC8gAIIIVBRMxpB1bB0bQ8SkqiIAEdGMcrDo2NCpShOAwWDQ7h+JyoZSLCJghrEkAgDTOqZIATAjBk0LAFLV5HiMIzIejzN9yZZerIAxxIaCVwB7O829BzfuPbixt9MACF7Z0BF327Ft9uxf0FmfsQExgldm+Km8Pup98fW7AH778fl4z1tL0atxxAYqOq8PMxkQAVAAhjkGJQIbqiq//vDWsO+GPbf+5a2q8mwIhBjUzMqr2dbKaDALnwkECUoMP5Wla8VPGx9989VjY+jzh6sf3/x599/GdVgFbAkKOZPEXA1mVWKoKAhs6LAOdz8dFcb88fvOD98+tYbW7o/qOqQkVJQ45ZyxOQQEACmaGHT5tXLt/ujJXzv/bNUr17uPn/x3e+3aEeAs6Fx95hO0zFg62Jtubx4u9NzzjYPtZ9XioKjH4ULH41DPaAAVGEcSVRXE1NThzbeH3/364cRHFe2V7rO7v/z957hTGpVZF0SvxGj3UdJgjsiiM+migsBMdRXeuNn/ZP0tgB59v7n9tOr2rYgCaLVDRuQ5GQBQWEvBayouM/lGqjoA6HdtpzQiqqpQWEch6tHuOUWQ2WjpKyQKUbClGBTQEFQo9AekKiJhMgmi6qxzjkWhAmZkN1puJyOFjBi0U5jJ5PD99z7oFm7j2dbKynJZlPWkHo8PFxeGm1ub+/sHUDpnEubfpFCY0Uz8cDh0HS66xerqOwCKolgYLty5c3s0us5EwUv6Ls4bVxkNjt+l1lYK0ROTMSxRYozLK8sS4+7ugbUu+WXR52rQzoOIFFKW3UF/oKpRYggBwsym3+9Npz59qM8BOY8ASLpRjOFgvJ8eVeHZEyEdGi6c5BcQJBPRGAMRUklFYkruMr6Z0mdjojQ/j58y6FnHzNB3xRWPX67gSw394ZKbTfxLW5r7w6VLDn1R5peBn+N4YuC0a9o+GbyUtR2PABmA9/6EaFc+QrYciSiEgNSmTdMYY5xzVwXOmPe+aRq0B51zztpLbYsLLcY4nU7T/f/cwBXJbE7gpQAAAABJRU5ErkJggg==" />
+<link rel="shortcut icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAADxElEQVR4nK1WTW8cRRB9Vd29M/vlLyIi9gBRDkTCHCLlAFwczgGkiD9gRVw48A/IhSM/AAmJE/8AFDiDxIl7FA6g2LFQjISEv3Y8O9vdVRx6Y4/tXtuxUhqtZna63quqVz3VBACAtbYsS2bGqzARqes6xgiAEnqv1yMiVX0lBAmqqqoYIwPodDqvEB2AqhJRURQAGAAzt9FVMkxEp68MbstRVVPBTxedCJ2uSTfplxnEBIWevIiI+XgZgE7XnCU+QaAKNjRYdC8gAIIIVBRMxpB1bB0bQ8SkqiIAEdGMcrDo2NCpShOAwWDQ7h+JyoZSLCJghrEkAgDTOqZIATAjBk0LAFLV5HiMIzIejzN9yZZerIAxxIaCVwB7O829BzfuPbixt9MACF7Z0BF327Ft9uxf0FmfsQExgldm+Km8Pup98fW7AH778fl4z1tL0atxxAYqOq8PMxkQAVAAhjkGJQIbqiq//vDWsO+GPbf+5a2q8mwIhBjUzMqr2dbKaDALnwkECUoMP5Wla8VPGx9989VjY+jzh6sf3/x599/GdVgFbAkKOZPEXA1mVWKoKAhs6LAOdz8dFcb88fvOD98+tYbW7o/qOqQkVJQ45ZyxOQQEACmaGHT5tXLt/ujJXzv/bNUr17uPn/x3e+3aEeAs6Fx95hO0zFg62Jtubx4u9NzzjYPtZ9XioKjH4ULH41DPaAAVGEcSVRXE1NThzbeH3/364cRHFe2V7rO7v/z957hTGpVZF0SvxGj3UdJgjsiiM+migsBMdRXeuNn/ZP0tgB59v7n9tOr2rYgCaLVDRuQ5GQBQWEvBayouM/lGqjoA6HdtpzQiqqpQWEch6tHuOUWQ2WjpKyQKUbClGBTQEFQo9AekKiJhMgmi6qxzjkWhAmZkN1puJyOFjBi0U5jJ5PD99z7oFm7j2dbKynJZlPWkHo8PFxeGm1ub+/sHUDpnEubfpFCY0Uz8cDh0HS66xerqOwCKolgYLty5c3s0us5EwUv6Ls4bVxkNjt+l1lYK0ROTMSxRYozLK8sS4+7ugbUu+WXR52rQzoOIFFKW3UF/oKpRYggBwsym3+9Npz59qM8BOY8ASLpRjOFgvJ8eVeHZEyEdGi6c5BcQJBPRGAMRUklFYkruMr6Z0mdjojQ/j58y6FnHzNB3xRWPX67gSw394ZKbTfxLW5r7w6VLDn1R5peBn+N4YuC0a9o+GbyUtR2PABmA9/6EaFc+QrYciSiEgNSmTdMYY5xzVwXOmPe+aRq0B51zztpLbYsLLcY4nU7T/f/cwBXJbE7gpQAAAABJRU5ErkJggg==" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-import { put } from '@vercel/blob';
-
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '50mb', // allow for multiple slides + audio
-    },
-  },
-};
-
-// Map data URL mime types to file extensions
-const MIME_TO_EXT = {
-  'image/jpeg': 'jpg',
-  'image/jpg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'audio/mpeg': 'mp3',
-  'audio/mp3': 'mp3',
-  'audio/wav': 'wav',
-  'audio/x-wav': 'wav',
-  'audio/ogg': 'ogg',
-  'video/mp4': 'mp4',
-};
-
-function parseDataUrl(dataUrl) {
-  // dataUrl looks like: data:image/jpeg;base64,/9j/4AAQ...
-  const match = /^data:([^;]+);base64,(.+)$/.exec(dataUrl);
-  if (!match) return null;
-  const mime = match[1].toLowerCase();
-  const base64 = match[2];
-  const ext = MIME_TO_EXT[mime] || 'bin';
-  return { mime, base64, ext };
-}
-
-export default async function handler(req, res) {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  :root {
+    --black: #0e0e0e;
+    --white: #f5f2ec;
+    --cream: #f0ece3;
+    --accent: #c8ff5a;
+    --accent-dark: #a8d940;
+    --muted: #6b6b6b;
+    --border: rgba(255,255,255,0.08);
+    --card-bg: #161616;
+    --input-bg: #1c1c1c;
+    --success: #4ade80;
+    --error: #f87171;
+    --warning: #fbbf24;
   }
 
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    return res.status(500).json({
-      error: 'BLOB_READ_WRITE_TOKEN not configured in environment',
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--black);
+    color: var(--white);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    font-family: 'Instrument Serif', serif;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+
+  .status-pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .status-pill.connected { border-color: var(--success); color: var(--success); }
+  .status-pill .s-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    min-height: calc(100vh - 65px);
+  }
+
+  /* SIDEBAR */
+  aside {
+    border-right: 1px solid var(--border);
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .sidebar-section {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 14px 12px 6px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--muted);
+    transition: all 0.15s;
+    border: 1px solid transparent;
+    background: none;
+    width: 100%;
+    text-align: left;
+  }
+  .nav-item:hover { color: var(--white); background: rgba(255,255,255,0.04); }
+  .nav-item.active { color: var(--white); background: rgba(255,255,255,0.07); border-color: var(--border); }
+  .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+  .nav-badge {
+    margin-left: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    background: var(--accent);
+    color: var(--black);
+    border-radius: 100px;
+    padding: 1px 7px;
+    font-weight: 500;
+  }
+
+  .api-section {
+    margin-top: auto;
+    padding: 16px;
+    background: var(--card-bg);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .api-section label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 6px; font-family: 'DM Mono', monospace; }
+  .api-section input {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: var(--white);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    margin-bottom: 8px;
+  }
+  .api-section input:focus { outline: none; border-color: rgba(200,255,90,0.4); }
+  .api-section input::placeholder { color: #3a3a3a; }
+
+  /* MAIN */
+  main {
+    padding: 32px;
+    overflow-y: auto;
+    max-height: calc(100vh - 65px);
+    position: relative;
+  }
+
+  .pane { display: none; }
+  .pane.active { display: block; }
+
+  .pane-header {
+    margin-bottom: 28px;
+  }
+  .pane-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 28px;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+  .pane-sub { font-size: 13px; color: var(--muted); }
+
+  /* CARDS */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+
+  .card-title {
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 14px;
+  }
+
+  /* FORM ELEMENTS */
+  label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 5px; }
+  input[type=text], input[type=password], input[type=number], textarea, select {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    margin-bottom: 14px;
+    transition: border-color 0.15s;
+  }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: rgba(200,255,90,0.5); }
+  input::placeholder, textarea::placeholder { color: #333; }
+  textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
+  select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6b6b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+  select option { background: #1c1c1c; }
+
+  .field-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* BUTTONS */
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--black);
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-dark); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--white);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover:not(:disabled) { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.04); }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--error);
+    border: 1px solid rgba(248,113,113,0.2);
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+  .btn-danger:hover { background: rgba(248,113,113,0.07); }
+
+  /* HOOK FORMULA */
+  .formula-box {
+    background: rgba(200,255,90,0.06);
+    border: 1px solid rgba(200,255,90,0.2);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .formula-box .f-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  .formula-box .f-text { color: rgba(245,242,236,0.8); }
+  .formula-box .f-highlight { color: var(--accent); font-weight: 500; }
+
+  /* HOOK LIST */
+  .hook-item {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .hook-item:hover { border-color: rgba(255,255,255,0.15); }
+  .hook-item.selected { border-color: var(--accent); background: rgba(200,255,90,0.04); }
+  .hook-item .hook-text { flex: 1; font-size: 14px; line-height: 1.5; }
+  .hook-item .hook-radio {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 1.5px solid var(--muted);
+    flex-shrink: 0;
+    margin-top: 2px;
+    transition: all 0.15s;
+  }
+  .hook-item.selected .hook-radio { border-color: var(--accent); background: var(--accent); }
+  .hook-est { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+  /* SLIDE PREVIEW */
+  .slides-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .slide-cell {
+    aspect-ratio: 9/16;
+    min-height: 180px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #111;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .slide-cell img { width: 100%; height: 100%; object-fit: cover; }
+  .slide-cell .slide-n {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .slide-cell .slide-hook-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    background: rgba(0,0,0,0.35);
+    font-size: 11px;
+    font-weight: 500;
+    text-align: center;
+    line-height: 1.4;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  }
+  .slide-cell .spinner-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .slide-cell .style-tag {
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'DM Mono', monospace;
+    font-size: 8px;
+    background: rgba(0,0,0,0.7);
+    color: rgba(255,255,255,0.7);
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    max-width: 90%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .slide-cell.generating { border-color: rgba(200,255,90,0.3); animation: glow-pulse 1.5s ease-in-out infinite; }
+  @keyframes glow-pulse { 0%,100%{border-color:rgba(200,255,90,0.15)} 50%{border-color:rgba(200,255,90,0.5)} }
+
+  /* SPINNER */
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.1);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  .spinner-sm { width: 12px; height: 12px; border-width: 1.5px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* CAPTION AREA */
+  .caption-preview {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: rgba(245,242,236,0.85);
+    white-space: pre-wrap;
+    min-height: 80px;
+    font-family: 'DM Sans', sans-serif;
+    margin-bottom: 10px;
+  }
+
+  .hashtag { color: var(--accent); }
+
+  /* PROGRESS BAR */
+  .progress-bar-wrap {
+    background: rgba(255,255,255,0.06);
+    border-radius: 100px;
+    height: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 100px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+  .progress-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  /* LOG */
+  .log-box {
+    background: #0a0a0a;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.8;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+  }
+  .log-box .log-ok { color: var(--success); }
+  .log-box .log-err { color: var(--error); }
+  .log-box .log-info { color: var(--accent); }
+
+  /* STYLE TAGS */
+  .styles-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .style-chip {
+    padding: 5px 12px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.15s;
+    background: none;
+  }
+  .style-chip:hover { border-color: rgba(255,255,255,0.2); color: var(--white); }
+  .style-chip.on { border-color: var(--accent); color: var(--accent); background: rgba(200,255,90,0.06); }
+
+  /* PERFORMANCE TABLE */
+  .perf-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .perf-table th { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  .perf-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+  .perf-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .view-count { font-family: 'DM Mono', monospace; font-weight: 500; }
+  .view-count.high { color: var(--accent); }
+  .view-count.mid { color: var(--warning); }
+  .view-count.low { color: var(--muted); }
+  .hook-preview { max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; color: rgba(245,242,236,0.75); }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 9999;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s ease;
+    max-width: 320px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: rgba(74,222,128,0.3); }
+  .toast.error { border-color: rgba(248,113,113,0.3); }
+
+  /* DIVIDER */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  .actions-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    aside { display: none; }
+    .slides-row { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    Larry
+    <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);font-style:normal;margin-left:4px;">/ TikTok Slideshow</span>
+  </div>
+
+</header>
+
+<div class="layout">
+  <aside>
+    <div class="sidebar-section">Workflow</div>
+    <button class="nav-item active" onclick="nav('setup')"><span class="icon">⚙</span> Setup</button>
+    <button class="nav-item" onclick="nav('hooks')"><span class="icon">🎣</span> Hook Generator</button>
+    <button class="nav-item" onclick="nav('generate')"><span class="icon">✦</span> Generate Slideshow</button>
+    <button class="nav-item" onclick="nav('video')"><span class="icon">🎬</span> Generate Video</button>
+    <button class="nav-item" onclick="nav('accounts')"><span class="icon">👤</span> Accounts</button>
+    <button class="nav-item" onclick="nav('performance')"><span class="icon">📈</span> Performance Log</button>
+    <button class="nav-item" onclick="nav('schedule')"><span class="icon">🕐</span> Scheduler</button>
+
+    <div class="sidebar-section" style="margin-top:8px;">Docs</div>
+    <button class="nav-item" style="font-size:12px;" onclick="openLink('https://fal.ai/dashboard')"><span class="icon">↗</span> FAL dashboard</button>
+
+  </aside>
+
+  <main>
+  <div style="position:sticky;top:0;z-index:50;background:#0e0e0e;padding:12px 0 10px;margin-bottom:10px;">
+  <div style="background:#161616;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px 18px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+    <div style="flex:1;min-width:180px;">
+      <div style="font-family:DM Mono,monospace;font-size:10px;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">FAL API Key (images)</div>
+      <input type="password" id="fal-key" placeholder="fal key..." oninput="updateStatus()" style="width:100%;background:#1c1c1c;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:9px 12px;color:#f5f2ec;font-family:DM Mono,monospace;font-size:12px;margin:0;" />
+    </div>
+    <div style="flex:1;min-width:180px;">
+      <div style="font-family:DM Mono,monospace;font-size:10px;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">Anthropic Key (hooks &amp; captions)</div>
+      <input type="password" id="anthropic-key" placeholder="sk-ant-..." oninput="updateStatus()" style="width:100%;background:#1c1c1c;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:9px 12px;color:#f5f2ec;font-family:DM Mono,monospace;font-size:12px;margin:0;" />
+    </div>
+    <div id="main-status" style="font-family:DM Mono,monospace;font-size:11px;padding:9px 14px;border-radius:100px;border:1px solid rgba(255,255,255,0.08);color:#6b6b6b;white-space:nowrap;display:flex;align-items:center;gap:6px;"><div style="width:6px;height:6px;border-radius:50%;background:currentColor;"></div>not set</div>
+    <a id="tiktok-connect-btn" href="/api/tiktok-auth" style="padding:9px 16px;border-radius:100px;border:1px solid rgba(255,255,255,0.08);background:none;color:#6b6b6b;font-family:DM Mono,monospace;font-size:11px;white-space:nowrap;text-decoration:none;display:flex;align-items:center;gap:6px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.01-.07z"/></svg>
+      Connect TikTok
+    </a>
+  </div>
+  </div>
+
+    <!-- SETUP PANE -->
+    <div class="pane active" id="pane-setup">
+      <div class="pane-header">
+        <div class="pane-title">App setup</div>
+        <div class="pane-sub">Configure your API keys, app niche, and image architecture</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">App context</div>
+        <div class="field-group">
+          <div>
+            <label>App name</label>
+            <input type="text" id="app-name" placeholder="e.g. Snugly, Aureya..." value="Aureya" />
+          </div>
+          <div>
+            <label>App category</label>
+            <select id="app-category">
+              <option value="home">Home design / renovation</option>
+              <option value="beauty" selected>Beauty & skincare</option>
+              <option value="fashion">Fashion & style</option>
+              <option value="fitness">Fitness & wellness</option>
+              <option value="food">Food & recipes</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+        <label>App one-liner</label>
+        <input type="text" id="app-oneliner" placeholder="e.g. AI-powered room redesign using a photo of your room" value="AI-powered skincare routine builder that analyses your skin and recommends products for sensitive, eczema-prone and rosacea skin" />
+        <label>Target audience</label>
+        <input type="text" id="app-audience" placeholder="e.g. UK renters aged 20-35 who can't renovate" value="Women aged 18-40 with sensitive, eczema-prone or rosacea skin who are overwhelmed by skincare and scared of reactions" />
+      </div>
+
+      <div class="card">
+        <div class="card-title">Image architecture (locked across all 6 slides)</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6;">
+          This is the room/subject description that stays <em>identical</em> in every prompt. Only the style changes per slide. Be obsessively specific — window positions, dimensions, camera angle, lighting.
+        </div>
+        <label>Locked architecture description</label>
+        <textarea id="arch-desc" rows="5" placeholder="e.g. casual selfie-style portrait, waist-up or shoulder-up framing, arm extended holding phone...">casual selfie-style portrait of a woman in her late 20s, waist-up or shoulder-up framing, arm extended holding phone camera, natural lighting from windows or lamps, looking directly at camera with relaxed expression, real skin texture visible with natural pores and fine details, no makeup or minimal makeup, realistic phone selfie quality, slight camera grain or JPEG compression, taken in home settings like bathroom mirror, bedroom, car, kitchen or sofa, authentic UGC aesthetic, no studio lighting or professional photography, portrait orientation 9:16</textarea>
+        <label>"Before" slide extras (signs of life)</label>
+        <input type="text" id="before-extras" placeholder="e.g. a flat screen TV, mugs on the counter..." value="a half-used tube of cream on the bathroom counter, a glass of water nearby, slight redness visible on cheeks and nose" />
+      </div>
+
+      <div class="card">
+        <div class="card-title">Style variants (6 slides)</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">Define the style for each of the 6 slides. Slide 1 is typically the "before" state.</div>
+        <div id="styles-container"></div>
+        <button class="btn btn-ghost" style="font-size:12px;" onclick="resetStyles()">↺ Reset to defaults</button>
+      </div>
+
+      <button class="btn btn-primary" onclick="nav('hooks')">Continue to hooks →</button>
+    </div>
+
+    <!-- HOOKS PANE -->
+    <div class="pane" id="pane-hooks">
+      <div class="pane-header">
+        <div class="pane-title">Hook generator</div>
+        <div class="pane-sub">The formula that drives 100K+ views</div>
+      </div>
+
+      <div class="formula-box">
+        <div class="f-label">Larry's proven formula</div>
+        <div class="f-text">
+          <span class="f-highlight">[Another person]</span> + <span class="f-highlight">[conflict or doubt]</span> → showed them AI → they changed their mind.<br/>
+          <span style="font-size:12px;color:rgba(245,242,236,0.5);">Every post following this formula clears 50K minimum. Most clear 100K+.</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Generate hooks with Claude</div>
+        <label>Niche / context for hook generation</label>
+        <textarea id="hook-context" rows="2" placeholder="Pulls from your setup automatically..." readonly style="color:var(--muted);font-size:13px;"></textarea>
+        <label>Number of hooks to generate</label>
+        <select id="hook-count">
+          <option value="5">5 hooks</option>
+          <option value="10" selected>10 hooks</option>
+          <option value="15">15 hooks</option>
+        </select>
+        <button class="btn btn-primary" onclick="generateHooks()" id="hook-btn">
+          <span id="hook-btn-inner">✦ Generate hooks with Claude</span>
+        </button>
+      </div>
+
+      <div id="hooks-list" style="margin-top:16px;"></div>
+
+      <div id="selected-hook-card" style="display:none;" class="card" style="margin-top:16px;">
+        <div class="card-title">Selected hook</div>
+        <div id="selected-hook-text" style="font-size:16px;font-weight:500;line-height:1.5;margin-bottom:12px;"></div>
+        <button class="btn btn-primary" onclick="nav('generate')">Use this hook → Generate slideshow</button>
+      </div>
+
+      <div class="card" style="margin-top:20px;background:rgba(200,255,90,0.08);border:1px solid rgba(200,255,90,0.2);">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:20px;">📊</span>
+          <div class="card-title" style="margin:0;">Content Template System</div>
+        </div>
+        <p style="font-size:13px;color:#999;margin-bottom:14px;line-height:1.6;">Generate batch hooks across 5 proven templates to scale your UGC production. Each template has 5 variations for maximum content diversity.</p>
+        <button class="btn btn-primary" onclick="generateTemplateHooks()" style="width:100%;">⟳ Generate 10 Template-Based Hooks</button>
+        <div id="template-hooks-display" style="margin-top:16px;"></div>
+      </div>
+    </div>
+
+    <!-- GENERATE PANE -->
+    <div class="pane" id="pane-generate">
+      <div class="pane-header">
+        <div class="pane-title">Generate slideshow</div>
+        <div class="pane-sub">6 slides · portrait · locked architecture · hook on slide 1</div>
+      </div>
+
+      <div class="card" id="account-select-card">
+        <div class="card-title">Select account to generate for</div>
+        <div id="account-selector" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+        <div id="no-account-msg" style="font-size:13px;color:var(--muted);display:none;">No accounts set up yet — add accounts in the Accounts tab first.</div>
+        <div id="selected-char-preview" style="display:none;margin-top:12px;display:flex;align-items:center;gap:12px;">
+          <img id="selected-char-img" style="width:48px;height:64px;object-fit:cover;border-radius:6px;border:1.5px solid var(--accent);" />
+          <div>
+            <div id="selected-account-name" style="font-size:14px;font-weight:500;"></div>
+            <div style="font-size:11px;color:var(--muted);">Character locked — all slides will use this face</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Slide content</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Claude will decide the best mix of image types and text for each slide based on your hook.</div>
+        <label>Hook (Slide 1)</label>
+        <input type="text" id="gen-hook" placeholder="Paste or type your hook..." />
+        <button class="btn btn-ghost" style="font-size:12px;margin-top:4px;" onclick="generateSlideTexts()">✦ Auto-plan all 6 slides with Claude</button>
+        <div id="slide-plan-preview" style="display:none;margin-top:12px;"></div>
+        <div class="card-title" style="margin-top:16px;">Caption style</div>
+        <select id="caption-style">
+          <option value="story">Story-style (natural, 1st person)</option>
+          <option value="question">Question hook</option>
+          <option value="listicle">Short listicle</option>
+        </select>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Slide preview</div>
+        <div class="slides-row" id="slides-preview-row"></div>
+        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="gen-progress"></div></div>
+        <div class="progress-label" id="gen-progress-label">Ready to generate</div>
+        <div class="log-box" id="gen-log">Waiting...</div>
+        <div class="actions-row">
+          <button class="btn btn-primary" id="gen-btn-main" onclick="generateSlideshow()">✦ Generate all 6 slides</button>
+          <button class="btn btn-ghost" id="caption-btn" onclick="generateCaption()" disabled>Generate caption</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Bulk generate</div>
+        <div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:14px;line-height:1.6;">Generate multiple slideshows at once using different hooks. Each downloads as a separate folder. Perfect for posting across 4+ accounts.</div>
+        <label>Number of slideshows to generate</label>
+        <select id="bulk-count">
+          <option value="1">1 slideshow</option>
+          <option value="3">3 slideshows</option>
+          <option value="5">5 slideshows</option>
+          <option value="10">10 slideshows</option>
+        </select>
+        <label>Hook bank (one per line — leave empty to auto-generate)</label>
+        <textarea id="bulk-hooks" rows="5" placeholder="My dermatologist told me to stop buying random products...&#10;I showed my mom what AI recommended for my rosacea...&#10;My skin was flaring every week until I did this..."></textarea>
+        <button class="btn btn-primary" onclick="bulkGenerate()" id="bulk-btn" style="width:100%;">✦ Bulk generate slideshows</button>
+        <div id="bulk-progress" style="margin-top:12px;display:none;">
+          <div class="progress-bar-wrap"><div class="progress-bar-fill" id="bulk-progress-bar"></div></div>
+          <div class="progress-label" id="bulk-progress-label">Starting...</div>
+          <div class="log-box" id="bulk-log" style="max-height:120px;"></div>
+        </div>
+      </div>
+
+      <div class="card" id="caption-card" style="display:none;">
+        <div class="card-title">Caption + hashtags</div>
+        <div class="caption-preview" id="caption-output"></div>
+        <div class="actions-row">
+          <button class="btn btn-primary" onclick="postDirectToTikTok('inbox')" id="draft-btn">⬆ Save to Drafts</button>
+          <button class="btn btn-ghost" onclick="postDirectToTikTok('live')" id="post-btn" style="border-color:rgba(200,255,90,0.3);color:var(--accent);">✦ Post Live</button>
+          <button class="btn btn-ghost" onclick="downloadAllSlides()">↓ Download slides</button>
+          <button class="btn btn-ghost" onclick="copyCaption()">Copy caption</button>
+          <button class="btn btn-ghost" onclick="generateCaption()">Regenerate</button>
+        </div>
+      </div>
+
+      <div class="card" id="draft-success-card" style="display:none;">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;" id="success-card-title">Saved to drafts — next steps</div>
+        <div id="success-card-draft" style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(200,255,90,0.15);border:1px solid rgba(200,255,90,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#c8ff5a;flex-shrink:0;">1</div>
+            <div style="font-size:13px;line-height:1.5;">Open TikTok → tap <strong style="color:#f5f2ec;">Me</strong> → tap <strong style="color:#f5f2ec;">Drafts</strong> → open your slideshow</div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(200,255,90,0.15);border:1px solid rgba(200,255,90,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#c8ff5a;flex-shrink:0;">2</div>
+            <div style="font-size:13px;line-height:1.5;">Add a <strong style="color:#f5f2ec;">trending sound</strong> — this is the key step</div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(200,255,90,0.15);border:1px solid rgba(200,255,90,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#c8ff5a;flex-shrink:0;">3</div>
+            <div style="font-size:13px;line-height:1.5;">Paste caption → hit <strong style="color:#f5f2ec;">Post</strong></div>
+          </div>
+        </div>
+        <div id="success-card-live" style="display:none;align-items:center;gap:12px;">
+          <div style="width:24px;height:24px;border-radius:50%;background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.3);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;">✓</div>
+          <div style="font-size:13px;color:#4ade80;">Posted live to TikTok successfully!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIDEO GENERATOR PANE -->
+    <div class="pane" id="pane-video">
+      <div class="pane-header">
+        <div class="pane-title">Generate talking video</div>
+        <div class="pane-sub">5-10s lip-sync UGC video — character reads your hook out loud</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">1. Hook (what the character says)</div>
+        <textarea id="video-hook" rows="3" placeholder="I spent 6 months avoiding mirrors because of my rosacea until a random girl at Sephora told me about this" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-2);color:var(--text);font-family:inherit;font-size:14px;resize:vertical;"></textarea>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px;">Tip: Keep it under 25 words for a 5-10s video. The character will speak this aloud.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">2. Voice settings</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div>
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">ElevenLabs voice</label>
+            <select id="video-voice" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-2);color:var(--text);">
+              <option value="EXAVITQu4vr4xnSDxMaL">Bella — young female (default)</option>
+              <option value="21m00Tcm4TlvDq8ikWAM">Rachel — calm female</option>
+              <option value="AZnzlk1XvdvUeBnXmlld">Domi — confident female</option>
+              <option value="pFZP5JQG7iQjIQuC4Bku">Lily — soft female</option>
+              <option value="XrExE9yKIg1WjnnlVkGX">Matilda — warm female</option>
+              <option value="jsCqWAovK2LkecY7zXl4">Freya — natural female</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">ElevenLabs API key</label>
+            <input type="password" id="video-eleven-key" placeholder="sk_..." style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-2);color:var(--text);" />
+          </div>
+        </div>
+        <button class="btn" onclick="previewVoice()" id="preview-voice-btn" style="font-size:13px;">▶ Preview voice</button>
+        <audio id="voice-preview-audio" controls style="display:none;width:100%;margin-top:10px;"></audio>
+      </div>
+
+      <div class="card">
+        <div class="card-title">3. Character</div>
+        <div id="video-account-selector" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"></div>
+        <div style="font-size:12px;color:var(--muted);">Select an account — the character image will be used for lip-sync.</div>
+      </div>
+
+      <div class="card">
+        <button class="btn btn-primary" onclick="generateTalkingVideo()" id="gen-video-btn" style="width:100%;font-size:15px;padding:14px;">🎬 Generate talking video</button>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center;">~60-90 seconds · uses ElevenLabs + FAL sync-lipsync</div>
+      </div>
+
+      <div class="card" id="video-output-card" style="display:none;">
+        <div class="card-title">Output</div>
+        <video id="video-output" controls playsinline style="width:100%;max-width:360px;border-radius:12px;background:#000;display:block;margin:0 auto;"></video>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button class="btn" onclick="downloadVideo()" style="flex:1;">↓ Download MP4</button>
+          <button class="btn btn-primary" onclick="postVideoToTikTok()" id="post-video-btn" style="flex:1;">↑ Post to TikTok</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Console</div>
+        <div id="video-log" class="console" style="max-height:240px;overflow:auto;font-family:monospace;font-size:12px;background:#0a0a0a;padding:12px;border-radius:8px;color:#9aa;"></div>
+      </div>
+    </div>
+
+    <!-- ACCOUNTS PANE -->
+    <div class="pane" id="pane-accounts">
+      <div class="pane-header">
+        <div class="pane-title">Connected accounts</div>
+        <div class="pane-sub">Connect multiple TikTok accounts to post across all of them</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Add account + character</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Each account gets its own unique AI character. Claude will generate a unique character description automatically — just pick a skin type and vibe.</div>
+        
+        <label>Account nickname</label>
+        <input type="text" id="account-label" placeholder="e.g. Aureya Main, Skin Account 2..." />
+        
+        <label>Skin type for this character</label>
+        <select id="character-skin">
+          <option value="rosacea">Rosacea-prone skin</option>
+          <option value="eczema">Eczema-prone skin</option>
+          <option value="both">Both rosacea and eczema</option>
+          <option value="sensitive">General sensitive skin</option>
+        </select>
+
+        <label>Character vibe</label>
+        <select id="character-vibe">
+          <option value="everyday">Everyday woman, relatable</option>
+          <option value="professional">Professional, put-together</option>
+          <option value="young">Early 20s, student energy</option>
+          <option value="mature">Late 30s, busy mum</option>
+          <option value="diverse">Diverse, South Asian features</option>
+          <option value="diverse2">Diverse, East Asian features</option>
+          <option value="diverse3">Diverse, Black British features</option>
+        </select>
+
+        <div id="char-desc-preview" style="display:none;background:rgba(200,255,90,0.05);border:1px solid rgba(200,255,90,0.15);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:rgba(245,242,236,0.7);font-family:'DM Mono',monospace;line-height:1.6;">
+          <div style="color:var(--accent);font-size:10px;margin-bottom:4px;">CLAUDE-GENERATED CHARACTER</div>
+          <div id="char-desc-text"></div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:4px;">
+          <button onclick="generateCharacter()" id="gen-char-btn" class="btn btn-primary" style="flex:1;">✦ Generate character</button>
+        </div>
+
+        <div id="char-preview" style="display:none;margin-top:14px;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-family:DM Mono,monospace;">GENERATED CHARACTER — will be used for all slides</div>
+          <img id="char-preview-img" style="width:120px;height:160px;object-fit:cover;border-radius:var(--border-radius-md);border:2px solid var(--accent);" />
+          <div style="font-size:12px;color:var(--accent);margin-top:6px;">✓ Character locked — save account to use this face</div>
+          <button onclick="saveCharacterToAccount()" class="btn btn-primary" style="width:100%;margin-top:10px;">Save account with this character</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Connected accounts</div>
+        <div id="accounts-list"></div>
+        <div id="no-accounts" style="font-size:13px;color:var(--muted);text-align:center;padding:20px;">No accounts connected yet. Add your first account above.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Post to all accounts</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6;">After generating a slideshow, select which accounts to post to. Each account will receive the same slides with the same caption as a draft — then open TikTok on each device to add trending sound and publish.</div>
+        <div id="post-to-accounts-list" style="margin-bottom:14px;"></div>
+        <button class="btn btn-primary" onclick="postToSelectedAccounts()" id="multi-post-btn" style="width:100%;" disabled>↑ Download for selected accounts</button>
+      </div>
+    </div>
+
+    <!-- PERFORMANCE PANE -->
+    <div class="pane" id="pane-performance">
+      <div class="pane-header">
+        <div class="pane-title">Performance log</div>
+        <div class="pane-sub">Track what works. Every lesson becomes a rule.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Log a post result</div>
+        <div class="field-group">
+          <div>
+            <label>Hook used</label>
+            <input type="text" id="log-hook" placeholder="The hook text..." />
+          </div>
+          <div>
+            <label>Views</label>
+            <input type="number" id="log-views" placeholder="e.g. 234000" />
+          </div>
+        </div>
+        <label>Lesson learned (optional)</label>
+        <input type="text" id="log-lesson" placeholder="e.g. landlord conflict hooks outperform feature hooks by 20x" />
+        <button class="btn btn-primary" onclick="logPerformance()">Log result</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Post history</div>
+        <table class="perf-table">
+          <thead>
+            <tr>
+              <th>Hook</th>
+              <th>Views</th>
+              <th>Formula?</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="perf-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SCHEDULE PANE -->
+    <div class="pane" id="pane-schedule">
+      <div class="pane-header">
+        <div class="pane-title">Auto-scheduler</div>
+        <div class="pane-sub">Set a posting cadence · queue slideshows · rotate accounts · posts automatically via cron</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Schedule config</div>
+        <div class="field-group">
+          <div>
+            <label>Posts per day</label>
+            <input type="number" id="sched-posts-per-day" min="1" max="20" value="12" oninput="schedUpdatePreview()" />
+          </div>
+          <div>
+            <label>Posting window</label>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <select id="sched-window-start" onchange="schedUpdatePreview()" style="flex:1;margin-bottom:0;">
+                <option value="6">6am</option><option value="7">7am</option>
+                <option value="8" selected>8am</option><option value="9">9am</option><option value="10">10am</option>
+              </select>
+              <span style="color:var(--muted);font-size:12px;">to</span>
+              <select id="sched-window-end" onchange="schedUpdatePreview()" style="flex:1;margin-bottom:0;">
+                <option value="20">8pm</option><option value="21">9pm</option>
+                <option value="22" selected>10pm</option><option value="23">11pm</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div id="sched-account-rotation" style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0;"></div>
+        <div id="sched-time-preview" style="background:rgba(200,255,90,0.05);border:1px solid rgba(200,255,90,0.15);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-family:'DM Mono',monospace;font-size:11px;line-height:2;color:rgba(245,242,236,0.6);"></div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button class="btn btn-primary" onclick="saveSchedule()" style="flex:1;">Save schedule</button>
+          <div id="sched-status" style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Add to queue</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6;">Generate a slideshow first, then queue it here. The hourly cron job will post it automatically at the right time.</div>
+        <div id="sched-no-slides" style="font-size:13px;color:var(--muted);background:var(--input-bg);border-radius:8px;padding:14px;text-align:center;margin-bottom:12px;">No slides ready — generate a slideshow in the Generate tab first.</div>
+        <div id="sched-slide-ready" style="display:none;">
+          <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px;" id="sched-slide-thumbs"></div>
+          <label>Account to post from</label>
+          <select id="sched-post-account" style="margin-bottom:12px;"></select>
+          <label>Caption</label>
+          <textarea id="sched-caption" rows="3" placeholder="Paste or generate caption..."></textarea>
+          <label>Custom time (leave blank to auto-slot)</label>
+          <input type="datetime-local" id="sched-custom-time" style="margin-bottom:12px;" />
+          <button class="btn btn-primary" onclick="addToQueue()" style="width:100%;">+ Add to queue</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div class="card-title" style="margin-bottom:0;">Post queue <span id="queue-count-badge" class="nav-badge" style="display:none;"></span></div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px;" onclick="refreshQueue()">↻ Refresh</button>
+            <button class="btn btn-danger" onclick="clearQueue()">Clear all</button>
+          </div>
+        </div>
+        <div id="queue-list"><div style="font-size:13px;color:var(--muted);text-align:center;padding:20px;">Queue is empty</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Post log</div>
+        <div id="post-log-list"><div style="font-size:13px;color:var(--muted);text-align:center;padding:20px;">No posts yet</div></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let selectedHook = '';
+let generatedImages = [];
+let performanceLogs = JSON.parse(localStorage.getItem('larry_logs') || '[]');
+let styleVariants = [
+  { label: 'Before (flare state)', style: 'Visible rosacea or eczema flare. Moderate redness and irritation visible across cheeks and nose, some dry patches, skin looks uncomfortable but not extreme. Natural expression showing slight discomfort. Visible skin texture with real pores. No makeup. Casual home lighting.' },
+  { label: 'Week 1 — calming', style: 'Early improvement from flare. Redness slightly reduced but still noticeably present, some dry patches improving, skin still reactive. Visible pores and natural texture. Slight relief visible in expression. No makeup. Real skin texture, raw and unretouched.' },
+  { label: 'Week 2 — settling', style: 'Noticeable improvement. Redness reduced to patches rather than full flush, dry areas mostly healed, skin texture more even. Natural sebum balanced, pores visible. Real skin with fine lines and natural texture visible. No retouching.' },
+  { label: 'Week 3 — clearer', style: 'Clear skin emerging. Only faint redness remains, overall tone more even, texture smoother. Pores and fine details still visible, small marks still fading. Looks genuinely better but still clearly real skin, not airbrushed.' },
+  { label: 'Week 4 — glowing', style: 'Calm settled skin. Even skin tone, no active inflammation, naturally hydrated. Pores and fine lines fully visible, small natural imperfections present. Looks healthy and real, not perfect or filtered. Natural skin texture.' },
+  { label: 'After — transformed', style: 'Healthy calm skin. No redness or irritation. Pores, fine lines, and natural texture all clearly visible. Looks like a real person on a good skin day — not a model, not airbrushed. Small natural imperfections still present. Phone camera quality.' },
+];
+
+// ─── NAV ─────────────────────────────────────────────────────────────────────
+function nav(name) {
+  document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('pane-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') === `nav('${name}')`) n.classList.add('active');
+  });
+  if (name === 'hooks') syncHookContext();
+  if (name === 'generate') { syncGenHook(); renderSlidePreviewPlaceholders(); renderAccountSelector(); }
+  if (name === 'performance') renderPerfTable();
+  if (name === 'schedule') {
+    schedRenderAccountRotation();
+    schedRenderAccountDropdown();
+    schedCheckSlidesReady();
+    refreshQueue();
+    if (schedConfig) {
+      const ppd = document.getElementById('sched-posts-per-day');
+      const ws = document.getElementById('sched-window-start');
+      const we = document.getElementById('sched-window-end');
+      if (ppd) ppd.value = schedConfig.postsPerDay;
+      if (ws) ws.value = schedConfig.windowStart;
+      if (we) we.value = schedConfig.windowEnd;
+    }
+    schedUpdatePreview();
+  }
+}
+
+// ─── KEYS & STATUS ────────────────────────────────────────────────────────────
+function getFalKey() { const el = document.getElementById('fal-key'); return el ? el.value.trim() : ''; }
+function getAnthropicKey() { return document.getElementById('anthropic-key').value.trim(); }
+
+// ─── FAL.AI CLIENT ────────────────────────────────────────────────────────────
+// Submit via proxy (avoids CORS on POST), poll from browser (avoids timeout)
+async function callFal(endpoint, input, falKey) {
+  // Single POST to /api/fal — server uses fal.run (synchronous), returns result directly
+  const key = falKey || getFalKey();
+  const res = await fetch('/api/fal', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-fal-key': key },
+    body: JSON.stringify({ endpoint, input }),
+  });
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); }
+  catch(e) { throw new Error('fal proxy error: ' + text.slice(0, 200)); }
+  if (!res.ok) throw new Error(data.error || 'fal failed: ' + res.status);
+  return data;
+}
+
+
+function updateStatus() {
+  const oai = getFalKey();
+  const ant = getAnthropicKey();
+  if (oai) localStorage.setItem('larry_fal', oai);
+  if (ant) localStorage.setItem('larry_ant', ant);
+  const el = document.getElementById('main-status');
+  if (oai && getAnthropicKey()) {
+    el.innerHTML = '<div style="width:6px;height:6px;border-radius:50%;background:currentColor;"></div>Ready';
+    el.style.color = '#4ade80';
+    el.style.borderColor = 'rgba(74,222,128,0.3)';
+  } else {
+    el.innerHTML = '<div style="width:6px;height:6px;border-radius:50%;background:currentColor;"></div>Keys needed';
+    el.style.color = '#6b6b6b';
+    el.style.borderColor = 'rgba(255,255,255,0.08)';
+  }
+}
+
+function loadSavedKeys() {
+  const oai = localStorage.getItem('larry_fal');
+  const pz = localStorage.getItem('larry_pz');
+  const ch = localStorage.getItem('larry_ch');
+  const ant = localStorage.getItem('larry_ant');
+  const falEl = document.getElementById('fal-key'); if (falEl && oai) { falEl.value = oai; }
+  if (ant) document.getElementById('anthropic-key').value = ant;
+  updateStatus();
+}
+
+// ─── SETUP ────────────────────────────────────────────────────────────────────
+function renderStyleInputs() {
+  const c = document.getElementById('styles-container');
+  c.innerHTML = '';
+  styleVariants.forEach((v, i) => {
+    c.innerHTML += `
+      <div style="margin-bottom:14px;">
+        <label>Slide ${i + 1} — ${v.label}</label>
+        <textarea rows="2" oninput="styleVariants[${i}].style=this.value">${v.style}</textarea>
+      </div>`;
+  });
+}
+
+function resetStyles() {
+  styleVariants = [
+    { label: 'Before (flare state)', style: 'Visible rosacea or eczema flare. Moderate redness and irritation visible across cheeks and nose, some dry patches, skin looks uncomfortable but not extreme. Natural expression showing slight discomfort. Visible skin texture with real pores. No makeup. Casual home lighting.' },
+    { label: 'Week 1 — calming', style: 'Early improvement from flare. Redness slightly reduced but still noticeably present, some dry patches improving, skin still reactive. Visible pores and natural texture. Slight relief visible in expression. No makeup. Real skin texture, raw and unretouched.' },
+    { label: 'Week 2 — settling', style: 'Noticeable improvement. Redness reduced to patches rather than full flush, dry areas mostly healed, skin texture more even. Natural sebum balanced, pores visible. Real skin with fine lines and natural texture visible. No retouching.' },
+    { label: 'Week 3 — clearer', style: 'Clear skin emerging. Only faint redness remains, overall tone more even, texture smoother. Pores and fine details still visible, small marks still fading. Looks genuinely better but still clearly real skin, not airbrushed.' },
+    { label: 'Week 4 — glowing', style: 'Calm settled skin. Even skin tone, no active inflammation, naturally hydrated. Pores and fine lines fully visible, small natural imperfections present. Looks healthy and real, not perfect or filtered. Natural skin texture.' },
+    { label: 'After — transformed', style: 'Healthy calm skin. No redness or irritation. Pores, fine lines, and natural texture all clearly visible. Looks like a real person on a good skin day — not a model, not airbrushed. Small natural imperfections still present. Phone camera quality.' },
+  ];
+  renderStyleInputs();
+}
+renderStyleInputs();
+
+// ─── TEMPLATE SYSTEM ──────────────────────────────────────────────────────────
+const CONTENT_TEMPLATES = {
+  A: {
+    name: 'POV: Problem → Solution',
+    icon: '💼',
+    variations: [
+      { scenario: 'work meeting', emoji: '💼' },
+      { scenario: 'on a date', emoji: '💕' },
+      { scenario: 'at the gym', emoji: '💪' },
+      { scenario: 'family dinner', emoji: '🍽️' },
+      { scenario: 'video call', emoji: '📹' }
+    ]
+  },
+  B: {
+    name: 'Ingredient Myth-Bust',
+    icon: '🔬',
+    variations: [
+      { ingredient: 'ceramides', claim: 'only in expensive creams' },
+      { ingredient: 'retinol', claim: 'always causes irritation' },
+      { ingredient: 'niacinamide', claim: 'just a filler' },
+      { ingredient: 'fragrance-free', claim: 'means it smells bad' },
+      { ingredient: 'hyaluronic acid', claim: 'only works in humid air' }
+    ]
+  },
+  C: {
+    name: 'Before/After Routine',
+    icon: '✨',
+    variations: [
+      { time: 'morning routine', duration: '2 min' },
+      { time: 'nighttime routine', duration: '5 min' },
+      { time: 'quick fix routine', duration: '30 sec' },
+      { time: 'full 10-step routine', duration: '10 min' },
+      { time: 'emergency routine', duration: '3 min' }
+    ]
+  },
+  D: {
+    name: 'Day in the Life',
+    icon: '🌅',
+    variations: [
+      { skinType: 'oily + sensitive' },
+      { skinType: 'dry + sensitive' },
+      { skinType: 'reactive + sensitive' },
+      { skinType: 'dehydrated + sensitive' },
+      { skinType: 'combination + sensitive' }
+    ]
+  },
+  E: {
+    name: '3 Things Derms Wish You Knew',
+    icon: '👩‍⚕️',
+    variations: [
+      { topic: 'inflammation & barrier health' },
+      { topic: 'product layering & absorption' },
+      { topic: 'irritant identification' },
+      { topic: 'seasonal skin transitions' },
+      { topic: 'sensitive skin myths' }
+    ]
+  }
+};
+
+async function generateTemplateHooks() {
+  if (!getAnthropicKey()) {
+    showToast('Anthropic API key required in Setup', 'error');
+    nav('setup');
+    return;
+  }
+
+  const btn = event.target;
+  btn.disabled = true;
+  const origText = btn.textContent;
+  btn.textContent = '⟳ Generating...';
+
+  try {
+    const allHooks = [];
+    const appName = document.getElementById('app-name').value || 'Aureya';
+    const appAudience = document.getElementById('app-audience').value || 'women with sensitive skin';
+    
+    // For each template, generate 2 hooks from random variations
+    for (const [templateKey, template] of Object.entries(CONTENT_TEMPLATES)) {
+      const selectedVars = template.variations.sort(() => Math.random() - 0.5).slice(0, 2);
+      
+      for (const variation of selectedVars) {
+        // Build prompt based on variation type
+        let varStr = '';
+        if (variation.scenario) varStr = `during a ${variation.scenario}`;
+        else if (variation.ingredient) varStr = `myth-busting: "${variation.ingredient} — ${variation.claim}"`;
+        else if (variation.time) varStr = `a ${variation.time} (${variation.duration})`;
+        else if (variation.skinType) varStr = `managing ${variation.skinType} skin`;
+        else if (variation.topic) varStr = `about ${variation.topic}`;
+
+        const prompt = `Generate ONE viral TikTok hook for ${appName} (skincare app for ${appAudience}) for a "${template.name}" content piece ${varStr}. 
+
+Hook must be:
+- 5-12 words max
+- Start with action or emotional hook
+- Create curiosity gap (end mid-story)
+- Specific and relatable
+- No marketing jargon
+
+Return only the hook text, nothing else.`;
+
+        const response = await fetch('/api/claude', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-anthropic-key': getAnthropicKey()
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 150,
+            messages: [{ role: 'user', content: prompt }]
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.error?.message || 'API error');
+        }
+        
+        const data = await response.json();
+        const hook = data.content[0].text.trim();
+        
+        allHooks.push({
+          template: templateKey,
+          templateName: template.name,
+          templateIcon: template.icon,
+          variation: variation,
+          hook: hook
+        });
+      }
+      
+      // Small delay between template requests
+      await new Promise(r => setTimeout(r, 300));
+    }
+    
+    displayTemplateHooks(allHooks);
+    showToast(`✓ Generated ${allHooks.length} hooks across 5 templates`, 'success');
+  } catch (error) {
+    showToast('Error: ' + error.message, 'error');
+    console.error(error);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = origText;
+  }
+}
+
+function displayTemplateHooks(hooks) {
+  const container = document.getElementById('template-hooks-display');
+  
+  let html = '<div style="margin-top:12px;">';
+  html += '<div style="font-size:12px;color:#999;margin-bottom:12px;">✓ Batch generated — click any hook to copy</div>';
+  
+  const byTemplate = {};
+  hooks.forEach(h => {
+    if (!byTemplate[h.template]) byTemplate[h.template] = [];
+    byTemplate[h.template].push(h);
+  });
+  
+  Object.entries(byTemplate).forEach(([key, items]) => {
+    const first = items[0];
+    html += `<div style="margin-bottom:14px;">`;
+    html += `<div style="font-weight:500;margin-bottom:8px;color:var(--white);"><span style="font-size:16px;margin-right:6px;">${first.templateIcon}</span>Template ${key}: ${first.templateName}</div>`;
+    
+    items.forEach((item, idx) => {
+      const varStr = Object.values(item.variation).join(' · ');
+      const hookId = `hook-${Date.now()}-${idx}`;
+      html += `<div style="margin:6px 0;padding:8px;background:rgba(255,255,255,0.03);border-radius:4px;border-left:2px solid var(--accent);cursor:pointer;font-size:13px;" data-hook-text="${item.hook.replace(/"/g, '&quot;')}" onclick="copyHookFromElement(this)">`;
+      html += `<div style="color:#999;font-size:10px;margin-bottom:3px;">• ${varStr}</div>`;
+      html += `<div>${item.hook}</div>`;
+      html += `<div style="font-size:10px;color:var(--accent);margin-top:4px;">click to copy</div>`;
+      html += `</div>`;
     });
+    
+    html += `</div>`;
+  });
+  
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function copyHookFromElement(el) {
+  const text = el.getAttribute('data-hook-text');
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Hook copied to clipboard', 'success');
+  }).catch(err => {
+    showToast('Failed to copy: ' + err.message, 'error');
+  });
+}
+
+// ─── HOOKS ────────────────────────────────────────────────────────────────────
+function syncHookContext() {
+  const name = document.getElementById('app-name').value || '[app name]';
+  const cat = document.getElementById('app-category').value;
+  const ol = document.getElementById('app-oneliner').value || '[app description]';
+  const aud = document.getElementById('app-audience').value || '[target audience]';
+  document.getElementById('hook-context').value = `App: ${name} — ${ol}\nAudience: ${aud}\nCategory: ${cat}`;
+}
+
+async function generateHooks() {
+  const btn = document.getElementById('hook-btn');
+  const inner = document.getElementById('hook-btn-inner');
+  btn.disabled = true;
+  inner.innerHTML = '<div class="spinner spinner-sm"></div> Generating...';
+
+  const count = document.getElementById('hook-count').value;
+  const context = document.getElementById('hook-context').value;
+
+  const prompt = `You are a viral TikTok content strategist for sensitive skincare (eczema and rosacea).
+
+PROVEN WINNING HOOK (752 views, 21% completion on a brand new account):
+"I spent 6 months avoiding mirrors because of my rosacea until a random girl at Sephora told me about this"
+
+HOOK FORMAT RULES (non-negotiable):
+- MUST start with "I" or "My" — no exceptions
+- Second word must be a physical action or time period: "I spent", "I stopped", "My skin", "I cancelled", "I cried"
+- Must contain immediate physical sensation or pain: burning, raw, itching, bleeding, flaking, stinging, swollen
+- BANNED opening words: "Sometimes", "One day", "You know", "Ever notice", "Have you", "When I"
+- BANNED soft phrases anywhere in hook: "sometimes", "one day", "you know how", "ever notice", "might help", "worth a try", "still early"
+
+SENSORY SPECIFICITY RULE:
+Every hook must include at least ONE of these specific physical details:
+- Time: "at 2am", "every morning", "for 6 months", "3 years"  
+- Location: "in the work bathroom", "at Target checkout", "on the tube", "in my car"
+- Physical sensation: "face was burning", "couldn't stop scratching", "skin was raw", "eyes were watering from the sting"
+- Behaviour caused by pain: "cancelled the date", "wore turtlenecks in July", "turned the lights off before getting undressed"
+
+CURIOSITY GAP RULE:
+The hook must end mid-story. The viewer cannot guess what happens next.
+WRONG: "I found something that helped my rosacea" — viewer already knows the outcome
+RIGHT: "until a stranger at Target noticed my arms and said something I didn't expect" — viewer has no idea what's coming
+
+HIGH-PERFORMING PATTERNS:
+1. Physical pain hook: "My [body part] was [specific sensation] every [time] for [period] until [unexpected person] at [specific place] told me I was doing [specific thing] wrong"
+2. Avoidance hook: "I [cancelled/quit/turned down] [specific normal thing] [X times] because my [rosacea/eczema] kept [specific behaviour] until [unexpected source]"
+3. Hiding hook: "I [wore/used/did specific thing] for [time period] just to hide my [specific skin problem] until [unexpected person] at [specific place] said something"
+4. Money wasted hook: "I spent $[specific amount] on [specific product type] that [specific bad outcome] until [unexpected person] explained what I was actually doing to my skin"
+5. Misdiagnosis hook: "My [specific product] was making my [rosacea/eczema] worse for [time period] and I had no idea until [unexpected real person] pointed it out"
+6. Relationship hook: "My [partner/mum/friend] thought I was being dramatic about my skin until [specific incident] happened in [timeframe]"
+
+BANNED WORDS IN HOOKS: "amazing", "incredible", "life-changing", "transformed", "journey", "results", "glowing", "cleared up", "fixed", "healed", "cured", "worked", "helped"
+
+App context:
+${context}
+
+Generate ${count} unique hooks. Each must start with "I" or "My", contain physical sensation, and end with an unresolved open loop. Return ONLY a JSON array of strings. No preamble, no markdown. Example: ["hook 1","hook 2"]`;
+
+
+  try {
+    const res = await fetch('/api/claude', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-anthropic-key': getAnthropicKey()
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+    const text = data.content?.[0]?.text || '[]';
+    const hooks = JSON.parse(text.replace(/```json|```/g, '').trim());
+    renderHooks(hooks);
+  } catch (e) {
+    showToast('Error generating hooks: ' + e.message, 'error');
+  }
+  btn.disabled = false;
+  inner.innerHTML = '✦ Generate hooks with Claude';
+}
+
+function renderHooks(hooks) {
+  const list = document.getElementById('hooks-list');
+  list.innerHTML = `<div class="card-title" style="margin-bottom:12px;">Pick a hook (${hooks.length} generated)</div>`;
+  hooks.forEach((h) => {
+    const hasFormula = /dermatologist|mum|mom|partner|flatmate|friend|sister|boyfriend|girlfriend|wife|husband|parent|dad|showed|stopped/i.test(h);
+    const div = document.createElement('div');
+    div.className = 'hook-item';
+    div.innerHTML = `
+      <div class="hook-radio"></div>
+      <div>
+        <div class="hook-text">${h}</div>
+        <div class="hook-est">${hasFormula ? '✓ follows the formula · est. 50K–200K views' : '⚠ may not follow formula'}</div>
+      </div>`;
+    div.onclick = () => selectHook(h, div);
+    list.appendChild(div);
+  });
+}
+
+function selectHook(hook, el) {
+  document.querySelectorAll('.hook-item').forEach(i => i.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedHook = hook;
+  document.getElementById('selected-hook-text').textContent = hook;
+  document.getElementById('selected-hook-card').style.display = 'block';
+}
+
+function syncGenHook() {
+  if (selectedHook) document.getElementById('gen-hook').value = selectedHook;
+}
+
+// ─── GENERATE SLIDESHOW (FAL Realistic Vision V6) ─────────────────────────────
+function renderSlidePreviewPlaceholders() {
+  const row = document.getElementById('slides-preview-row');
+  row.innerHTML = '';
+  for (let i = 0; i < 6; i++) {
+    row.innerHTML += `
+      <div class="slide-cell" id="slide-cell-${i}">
+        <div class="slide-n">${i + 1}</div>
+        <div class="spinner-wrap" style="color:var(--muted);font-size:10px;font-family:'DM Mono',monospace;text-align:center;">
+          <div style="font-size:20px;margin-bottom:6px;opacity:0.2">✦</div>
+          ${styleVariants[i]?.label || 'Style ' + (i + 1)}
+        </div>
+      </div>`;
+  }
+}
+renderSlidePreviewPlaceholders();
+
+function setLog(msg, type = '') {
+  const box = document.getElementById('gen-log');
+  const span = document.createElement('div');
+  span.className = type ? `log-${type}` : '';
+  span.textContent = '> ' + msg;
+  box.appendChild(span);
+  box.scrollTop = box.scrollHeight;
+}
+
+function setProgress(pct, label) {
+  document.getElementById('gen-progress').style.width = pct + '%';
+  document.getElementById('gen-progress-label').textContent = label;
+}
+
+async function trainLoRA(accountIndex) {
+  const acc = connectedAccounts[accountIndex];
+  if (!acc?.characterUrl) { showToast('No character image to train from', 'error'); return; }
+
+  const falKey = getFalKey();
+  if (!falKey) { showToast('Add your FAL API key', 'error'); return; }
+
+  const btn = document.getElementById(`lora-btn-${accountIndex}`);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Submitting...'; }
+
+  try {
+    // Generate 5 variations of the character first for training data
+    showToast('Generating training images for LoRA...', '');
+    const trainingImages = [acc.characterUrl];
+
+    // Generate 4 more variations using IP-Adapter
+    for (let v = 0; v < 4; v++) {
+      const angles = [
+        'looking slightly left, 3/4 angle',
+        'looking slightly right, 3/4 angle',
+        'looking directly at camera, slight smile',
+        'looking slightly down, contemplative expression'
+      ];
+      const data = await callFal('fal-ai/flux-general', {
+        prompt: `Extreme macro close-up portrait, ${acc.desc || 'woman'}, ${angles[v]}, hyperrealistic, ultra-detailed skin texture, photorealistic, cinematic macro photography, 8k resolution, raw photo, no makeup, natural soft window light`,
+        image_size: { width: 1024, height: 1024 },
+        num_inference_steps: 20,
+        guidance_scale: 3.2,
+        num_images: 1,
+        output_format: 'jpeg',
+        loras: [],
+        ip_adapter: [{ path: 'https://huggingface.co/XLabs-AI/flux-ip-adapter/resolve/main/ip_adapter.safetensors', image_url: acc.characterUrl, scale: 0.85 }]
+      }, falKey);
+      if (data.images?.[0]?.url) trainingImages.push(data.images[0].url);
+    }
+
+    showToast(`Training LoRA with ${trainingImages.length} images — takes ~20 mins`, '');
+
+    // Submit LoRA training to fal.ai
+    const trainData = await callFal('fal-ai/flux-lora-fast-training', {
+      images_data_url: trainingImages[0],
+      trigger_word: `${acc.label.replace(/\s+/g, '_').toLowerCase()}_person`,
+      steps: 1000,
+      learning_rate: 0.0001,
+      multiresolution_training: true
+    }, falKey);
+
+    if (trainData.diffusers_lora_file?.url || trainData.lora_file?.url) {
+      const loraPath = trainData.diffusers_lora_file?.url || trainData.lora_file?.url;
+      connectedAccounts[accountIndex].loraPath = loraPath;
+      connectedAccounts[accountIndex].loraTrigger = `${acc.label.replace(/\s+/g, '_').toLowerCase()}_person`;
+      connectedAccounts[accountIndex].loraTraining = false;
+      saveAccounts();
+      renderAccounts();
+      showToast(`LoRA trained for ${acc.label}!`, 'success');
+    } else {
+      // Training submitted but async - mark as in progress
+      connectedAccounts[accountIndex].loraTraining = true;
+      saveAccounts();
+      renderAccounts();
+      showToast('LoRA training submitted — check back in ~20 minutes', '');
+    }
+  } catch(e) {
+    showToast('Training error: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ Train LoRA'; }
+  }
+}
+
+// ─── MANUAL LORA URL MANAGEMENT ──────────────────────────────────────────────
+// Train on fal.ai UI → copy the model URL → paste here
+function saveLoRAUrl(index) {
+  const input = document.getElementById(`lora-url-${index}`);
+  if (!input) return;
+  const url = input.value.trim();
+  if (!url) { showToast('Paste a LoRA URL first', 'error'); return; }
+  if (!url.startsWith('http')) { showToast('Invalid URL — should start with https://', 'error'); return; }
+  connectedAccounts[index].loraPath = url;
+  // Auto-set trigger word from account label
+  connectedAccounts[index].loraTrigger = connectedAccounts[index].label.replace(/\s+/g, '_').toLowerCase() + '_person';
+  saveAccounts();
+  renderAccounts();
+  showToast('LoRA saved! All slides will now use this face.', 'success');
+}
+
+function removeLoRA(index) {
+  connectedAccounts[index].loraPath = null;
+  connectedAccounts[index].loraTrigger = null;
+  saveAccounts();
+  renderAccounts();
+  showToast('LoRA removed', '');
+}
+
+// ─── 2-PASS GENERATION PIPELINE ─────────────────────────────────────────────
+// Pass 1: FLUX Dev via fal-ai/flux-lora (best photorealism on FAL, FLUX architecture)
+// Pass 2: Crystal Upscaler (face-specific enhancement)
+
+// FLUX negative prompt — keep minimal, FLUX doesn't use weighted negatives like SD
+const RV_NEGATIVE = 'cartoon, anime, illustration, painting, drawing, cgi, 3d render, airbrushed, smooth plastic skin, perfect flawless skin, perfect symmetrical face, beauty retouch, watermark, deformed, bad anatomy, extra limbs, studio flash, ring light, rim light, key light, fill light, beauty dish, softbox, golden hour, cinematic lighting, cinematic, moody lighting, moody, dramatic lighting, atmospheric lighting, film lighting, warm glow, colour graded, teal orange, warm colour grade, professional photography, perfectly lit, staged, stock photo, flattering light, beauty lighting, soft light, model pose, model face, glossy skin, porcelain skin, perfect complexion, magazine photo, fashion photo, high fashion, editorial, perfect composition, centred portrait, symmetrical composition, hyperrealistic rendering, overprocessed, HDR, oversaturated, digital art, beautiful lighting, gorgeous lighting, sharp focus, ultra sharp, 8k, 4k resolution, ultra detailed, intricate details, masterpiece, best quality, high quality, professional photo, DSLR, mirrorless camera, 50mm lens, bokeh, depth of field, shallow dof, studio background, clean background, perfect skin, flawless complexion, instagram filter, beauty filter, face tune, smooth';
+
+// Pass 1: Generate with FLUX Dev via fal-ai/flux-lora
+// FLUX architecture — far superior skin texture and photorealism vs SD-based models
+function buildRVBody(prompt, charUrl, hasLoRA, loraPath, loraTrigger, slideIndex) {
+  // Per-slide realism — early slides rawer, later slides still real but calmer
+  const realismSuffixes = [
+    ', JPEG compression artefacts, phone front camera noise, skin looks raw and reactive, harsh bathroom overhead light casting unflattering shadows, slightly motion blurred, cheap cluttered home, zero retouching, looks like a real bad selfie',
+    ', phone camera grain and noise, dim lamp casting yellow uneven light, underexposed shadows, skin still visibly irritated, slightly off-centre framing, real messy home not staged, candid unaware expression',
+    ', slightly washed out flat indoor light, phone selfie quality, visible skin texture and pores, ordinary bedroom background, slightly imperfect framing, no retouching no filter',
+    ', natural grey window light, slightly underexposed, JPEG phone quality, real skin texture visible with natural pores and slight redness, ordinary home background, nothing staged',
+    ', flat overcast daylight, slight phone camera grain, real person not a model, uneven skin tone visible, ordinary cluttered home background, no filter no edit',
+    ', slightly overexposed car or home daylight, phone selfie noise, real skin with slight unevenness, casual messy hair, looks like genuine phone footage not a photoshoot',
+  ]
+  const realismSuffix = realismSuffixes[Math.min(slideIndex || 0, 5)];
+
+  let finalPrompt = prompt + realismSuffix;
+
+  // Prepend trigger word for LoRA
+  if (hasLoRA && loraTrigger) {
+    finalPrompt = `${loraTrigger}, ${finalPrompt}`;
+  }
+
+  const input = {
+    prompt: finalPrompt,
+    negative_prompt: RV_NEGATIVE,
+    image_size: { width: 768, height: 1360 },
+    num_inference_steps: 28,
+    guidance_scale: 2.0,
+    num_images: 1,
+    output_format: 'jpeg',
+    enable_safety_checker: false,
+    loras: [],
+  };
+
+  // Account LoRA — lower scale = less polished AI aesthetic from LoRA style bias
+  if (hasLoRA && loraPath) {
+    input.loras.push({ path: loraPath, scale: 1.0 });
+  }
+
+  return JSON.stringify({ endpoint: 'fal-ai/flux-lora', input });
+}
+
+// Pass 2: Crystal Upscaler — face-specific enhancement (face_detailer equivalent)
+// Endpoint: fal-ai/crystal-upscaler | Input: image_url, scale_factor, creativity
+// Output: images[] array
+async function runCrystalUpscaler(imageUrl, falKey) {
+  const data = await callFal('fal-ai/crystal-upscaler', {
+    image_url: imageUrl,
+    scale_factor: 2,
+    creativity: 0.3,
+  }, falKey);
+  return data?.images?.[0]?.url || data?.images?.[0] || null;
+}
+
+// Pass 3: AuraSR v2 — final 4x upscale tuned for AI-generated images
+async function runAuraSR(imageUrl, falKey) {
+  const data = await callFal('fal-ai/aura-sr', {
+    image_url: imageUrl,
+    upscale_factor: 4,
+    overlapping_tiles: true,
+    checkpoint: 'v2',
+  }, falKey);
+  return data?.image?.url || null;
+}
+
+// Build the full text prompt per scene type
+// Raw authentic UGC — phone camera, real life, not a photoshoot
+function buildSlidePrompt(planEntry, styleDesc, arch, hook, slideIndex, appName = 'Aureya') {
+  const type = planEntry?.type || 'selfie';
+  const scene = planEntry?.scene || '';
+  const skinState = planEntry?.skin_state || styleDesc;
+
+  const archClean = (arch || '').replace(/\([^)]+:\d+(\.\d+)?\)/g, '').replace(/\s+/g, ' ').trim();
+
+  // Camera variety — all emphasise phone imperfection over studio quality
+  const cameras = [
+    'shot on iPhone 13 front camera, slightly grainy sensor, harsh auto-exposure, slight barrel distortion, unedited JPEG',
+    'shot on Samsung Galaxy front camera, slight lens distortion, auto-HDR off, raw, slightly washed out',
+    'shot on iPhone 12 front camera, slight compression artefacts, unedited, phone selfie quality',
+    'shot on iPhone, slightly underexposed, motion soft, no post-processing, phone front camera',
+    'candid shot on smartphone, slightly soft focus, camera shake blur, natural unedited colours',
+    'shot on smartphone front cam, natural sensor grain, casual framing, no filters, slightly overexposed',
+  ];
+  const camera = cameras[slideIndex % cameras.length];
+
+  // Lighting — all unflattering, none cinematic
+  const lightings = [
+    'harsh overhead bathroom LED, unflattering shadows under eyes, slight overexposure on forehead and nose',
+    'dim bedroom lamp only, underexposed, muddy shadows, warm yellow cast, not a photoshoot',
+    'bright window sidelight from left, natural soft shadows, no fill light, slightly washed cheek',
+    'mixed indoor overhead light, slight green or yellow cast, flat unflattering, not studio lit',
+    'natural daylight through window, no artificial light, flat even exposure, no rim light',
+    'car visor mirror or dashboard, washed-out midday daylight, squinting slightly, harsh sun angle',
+  ];
+  const lighting = lightings[slideIndex % lightings.length];
+
+  // Framing — all slightly off, none perfectly composed
+  const framings = [
+    'selfie from below looking up, arm extended holding phone visible in frame, chin down slightly, unflattering angle, hand and wrist visible',
+    'car selfie, arm stretched out holding phone, seatbelt visible, steering wheel partially visible, sun coming through window, squinting slightly',
+    'side profile selfie, phone held out to the side, person looking sideways at camera, neck and jaw visible, casual angle',
+    'mirror selfie, full phone visible in reflection, other hand on hip or at side, bathroom or bedroom mirror, harsh light',
+    'selfie from above looking down, arm fully extended upward holding phone, top of head slightly cut off, confident angle',
+    'selfie lying in bed, phone held directly above face, slightly from above, pillow visible, morning look, ceiling or headboard behind',
+    'outdoor selfie shading eyes with free hand, arm holding phone extended, bright sky or building behind, squinting from sun',
+    'selfie sitting in car passenger seat, arm extended toward windscreen, dashboard visible, street outside',
+    'low angle selfie sitting on floor or sofa, knees visible, arm extended low holding phone, looking slightly down at camera',
+    'close selfie face only, phone held very close, arm not fully visible, slight double chin angle, very casual',
+    'selfie walking, slight motion blur, one arm extended holding phone, other arm mid-swing, street behind',
+    'bathroom selfie after shower, towel on head or hair wet, arm out holding phone, bathroom counter visible',
+  ];
+  // Randomise framing per generation so slides don't always use same angles
+  const framingOrder = [0,4,2,8,6,10,3,7,1,9,5,11];
+  const framing = framings[framingOrder[slideIndex % framingOrder.length]];
+
+  // Outfits — all casual, no styling
+  const outfits = [
+    'oversized hoodie, no styling, hair messy',
+    'baggy t-shirt or old top, hair in a loose bun or down flat',
+    'pyjama top or casual tank, no bra strap showing, fully covered',
+    'plain sweatshirt, no jewellery, no styling',
+    'basic worn t-shirt, hair down and natural, no accessories',
+    'old comfy jumper or fleece, hair tied up loosely',
+  ];
+  const outfit = outfits[slideIndex % outfits.length];
+
+  // Environments — force clutter and real spaces into every shot
+  const environments = [
+    'cluttered bathroom counter with skincare products and a toothbrush visible, slightly steamy mirror',
+    'messy bedroom background, unmade bed or clothes on chair slightly visible',
+    'real kitchen background, dishes or mugs on counter, ordinary UK flat interior',
+    'living room sofa or floor, cushions and everyday objects in background',
+    'car interior, seatbelt visible, sun visor down, street visible through window',
+    'outside on a residential street or car park, overcast daylight, houses or parked cars behind',
+    'office desk background, laptop and coffee cup visible, ordinary workplace',
+    'sitting on steps outside a building, concrete steps, real neighbourhood behind',
+    'home hallway or landing, coat rack or door visible behind',
+    'supermarket or pharmacy aisle, shelves visible in background',
+  ];
+  const environment = environments[slideIndex % environments.length];
+
+  const qualityPrefix = `${camera}, ${lighting}, authentic UGC content, no filters, no beauty mode, no airbrushing,`;
+
+  // Per-slide realism anchors — stronger language to prevent AI polish creeping in
+  const realismAnchors = [
+    'skin looks painful and reactive, distressed real person, zero retouching, raw unedited documentary photo, NOT a photoshoot',
+    'still visibly irritated, slight discomfort in expression, unretouched, real everyday person not a model',
+    'improving but clearly still imperfect, small blemishes present, zero airbrushing, candid unposed phone photo',
+    'noticeably better but real skin with open pores and texture, not beauty photography, casual phone selfie',
+    'calm healthy skin still showing real pores freckles and fine lines, not perfect, real person on a normal day',
+    'good skin day for a real person — texture pores and slight unevenness visible, no filter, not a model not staged',
+  ];
+  const realismAnchor = realismAnchors[Math.min(slideIndex, 5)];
+
+  // Shared negative additions passed back — caller merges with RV_NEGATIVE
+  let prompt = '';
+
+  if (type === 'selfie') {
+    prompt = `${framing}, ${environment}, ${qualityPrefix} ${archClean}, ${skinState}, ${outfit}, arm extended holding phone selfie, no makeup, real person not a model, phone camera selfie not taken by someone else, ${realismAnchor}`;
+  } else if (type === 'mirror') {
+    prompt = `bathroom mirror selfie, full phone visible in reflection being held up, arm visible holding phone, ${qualityPrefix} ${archClean}, ${skinState}, ${outfit}, morning routine, no makeup, taking own photo in mirror, ${realismAnchor}`;
+  } else if (type === 'lifestyle') {
+    prompt = `${framing}, ${environment}, ${qualityPrefix} ${archClean}, ${skinState}, ${outfit}, arm extended holding phone selfie, natural everyday moment, real person taking their own photo not posed by photographer, no makeup, fully clothed, ${realismAnchor}`;
+  } else if (type === 'skin_close') {
+    prompt = `${camera}, ${archClean}, extreme macro close-up face, ultra-detailed skin texture, visible open pores, fine peach fuzz, natural sebum and oiliness, ${skinState}, redness or unevenness, subtle blemishes, no makeup, raw unedited skin, no filters, no retouching, real person skin not CGI, ${realismAnchor}`;
+  } else if (type === 'before_after') {
+    prompt = `${qualityPrefix} ${archClean}, split image, left side: woman with ${skinState} looking tired and frustrated, right side: same woman with calmer clearer skin, same camera angle and lighting, ${environment}, authentic, no text overlays, fully clothed`;
+  } else if (type === 'product') {
+    const productScenarios = [
+      `${framing}, ${qualityPrefix} ${archClean}, holding up a skincare product reading the ingredients label, ${outfit}, ${environment}, curious uncertain expression, arm extended selfie angle, no makeup, fully clothed, ${realismAnchor}`,
+      `skincare products laid out on bathroom counter or bed, ${camera}, overhead flat lay shot, hand arranging products, cosy home surface, authentic UGC product shot, no person`,
+      `${qualityPrefix} ${archClean}, sitting on bathroom floor or bed, surrounded by skincare products spread around, ${outfit}, looking overwhelmed at too many products, selfie from slightly above, no makeup, ${realismAnchor}`,
+      `close-up of hand holding a single skincare product, ${camera}, blurred home background, thumb on label, authentic casual product shot, no face visible`,
+      `${framing}, ${qualityPrefix} ${archClean}, showing products in both hands comparing them, ${outfit}, ${environment}, uncertain expression trying to figure out which to use, no makeup, ${realismAnchor}`,
+    ];
+    prompt = productScenarios[Math.floor(Math.random() * productScenarios.length)];
+  } else if (type === 'app') {
+    const appScenarios = [
+      `iPhone laid flat on wooden table, screen facing up clearly showing a skincare app called ${appName} with dark background and product recommendation cards visible, ${camera}, overhead angle, hand partially visible reaching in, cosy home surface, phone screen bright and readable`,
+      `close-up of iPhone screen held in hand, ${appName} skincare app clearly visible on screen with routine cards and product list, ${camera}, thumb on screen scrolling, other hand partially visible, indoor home light, screen clearly legible`,
+      `${qualityPrefix} ${archClean}, arm extended holding iPhone showing ${appName} app screen face-on, ${outfit}, phone screen clearly showing skincare routine app, person looking at screen with slight smile of relief, no makeup, indoor light, ${realismAnchor}`,
+      `iPhone propped against bathroom counter or mug, screen clearly showing ${appName} skincare app with product recommendations, ${camera}, bathroom background with skincare products visible, phone screen bright and clearly visible`,
+      `${qualityPrefix} ${archClean}, lying in bed phone held above face clearly showing ${appName} app on screen, ${outfit}, screen light glowing on face, scrolling through skincare recommendations at night, no makeup, ${realismAnchor}`,
+    ];
+    prompt = appScenarios[Math.floor(Math.random() * appScenarios.length)];
+  } else {
+    prompt = `${qualityPrefix} ${archClean}, ${styleDesc}, ${framing}, ${environment}, no makeup, authentic real person not a model, fully clothed, ${realismAnchor}`;
+  }
+
+  return { prompt, negativePrompt: RV_NEGATIVE };
+}
+
+
+
+async function generateSlideshow() {
+  const falKey = getFalKey();
+  if (!falKey) { showToast('Add your FAL API key in Setup', 'error'); return; }
+  const hook = document.getElementById('gen-hook').value.trim();
+  if (!hook) { showToast('Enter a hook for slide 1', 'error'); return; }
+  const arch = document.getElementById('arch-desc').value.trim();
+  if (!arch) { showToast('Add architecture description in Setup', 'error'); return; }
+
+  const btn = document.getElementById('gen-btn-main');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generating...'; }
+  document.getElementById('caption-btn').disabled = true;
+
+  setProgress(0, 'Starting generation...');
+  generatedImages = new Array(6).fill(null);
+
+  // ── Story planning ──────────────────────────────────────────────────────
+  setLog('Planning story arc with Claude...', 'info');
+  slidePlan = [];
+  try {
+    const appName = document.getElementById('app-name')?.value || 'Aureya';
+    const acc2 = selectedAccountIndex !== null ? connectedAccounts[selectedAccountIndex] : null;
+    const charDesc = acc2?.desc || 'woman in her late 20s with sensitive skin';
+    const planPrompt = `Plan a 6-slide TikTok skincare story slideshow.
+
+Hook: "${hook}"
+App: ${appName} — AI skincare for sensitive/eczema/rosacea skin
+Character: ${charDesc}
+
+CRITICAL INSIGHT: TikTok data shows most viewers leave before slide 4. You must compress the payoff.
+The product/resolution must be visible by slide 3 — not slide 5 or 6.
+This is a personal story first. The product is revealed as the solution, not promoted.
+
+STORY STRUCTURE (6-slide arc — max 3 person shots, rest are product/app):
+- Slide 1: PERSON — selfie, raw pain visible, skin problem specific. Text = exact hook. type: selfie or mirror
+- Slide 2: PERSON — escalation, emotional low, failed attempts. 3-4 words MAX. type: selfie or lifestyle
+- Slide 3: PRODUCT — show the products that weren't working laid out or held up. No person needed. type: product
+- Slide 4: APP — the discovery. Show the Aureya app screen. type: app (MANDATORY)
+- Slide 5: PERSON — visible improvement, relief on face, same environment as slide 1 for contrast. type: selfie or lifestyle
+- Slide 6: PERSON — confident outdoor or different environment, emotional win, closes the hook loop. type: selfie or lifestyle
+
+FACE VARIETY RULE (critical for realism):
+- Only slides 1, 2, 5, 6 show the person — maximum 4 person shots
+- Slides 3 and 4 must NEVER show the person's face — product flat lay or app screen only
+- This variety is what makes the slideshow look like a real person's camera roll not AI
+
+APP MENTION GATING (hard rule):
+- Do NOT mention Aureya, any app, or any product by name before slide 4
+- Slides 1-3 must build tension WITHOUT revealing the solution
+- The app reveal on slide 4 must feel earned, not advertised
+
+PACING RULES (retention is everything — target >20% completion):
+- Slide 1 text = exact hook. No changes.
+- Slide 2 text = 3-4 words MAX, lowercase. Physical or emotional. No padding.
+- Slide 3 text = tease — creates urgency without revealing. "she said something i wasn't expecting"
+- Slide 4 text = realisation moment — short, visceral. "oh. it was my cleanser."
+- Slide 5 text = app shown, brief. "this changed how i look at my skin"
+- Slide 6 text = emotional close, lowercase, specific. Banned words: "amazing", "transformed", "results", "incredible", "still early", "worth a try", "might help"
+- NEVER repeat information — each slide adds something new
+
+SCENE RULES (critical):
+- ALL scenes must be INDOORS — bedroom, bathroom, kitchen, sofa, office, car only
+- NO golden hour, NO outdoor parks, NO coffee shops, NO cinematic lighting
+- Every scene must have harsh or unflattering real lighting — bathroom overhead, phone screen glow, window sidelight, dim lamp
+- Scenes must feel like a real person's home, not a photoshoot location
+- Slide 6 must be indoor — bathroom mirror, bedroom window, kitchen morning light
+
+SCENE TYPES: selfie, mirror, lifestyle, skin_close, app, product
+COMBINATION RULE: Slides 4-5 can use product then app back to back — show the products that weren't working (slide 4 product), then the app that figured it out (slide 5 app). This is a strong soft CTA sequence.
+SCENE VARIETY RULE (critical for realism):
+- No two consecutive slides should use the same scene type
+- Slides must vary between: close-up face, wide body shot, car selfie, mirror, outdoor, bedroom, bathroom
+- Slide 1: selfie from below or mirror — arm extended, hand visible, raw skin visible, pain on face
+- Slide 2: different angle — side profile selfie, or lying in bed selfie from above, or sitting on floor selfie low angle
+- Slide 3: another angle — outdoor selfie shading eyes, or car selfie with seatbelt, or mirror selfie
+- Slide 4: skin close-up selfie — phone held very close to face, raw skin texture visible OR mirror check showing improvement
+- Slide 5: app slide — phone laid flat on surface (table, bed), screen visible, no person needed
+- Slide 6: confident outdoor or car selfie — arm extended, person looks relaxed, different environment from slide 1
+- Every "scene" field MUST mention the selfie angle: "arm extended selfie from below", "car selfie seatbelt visible arm out", "mirror selfie phone in reflection", "lying in bed phone above face"
+- ALL shots must look like the person took the photo themselves — arm extended, phone visible, selfie angle
+- NEVER describe shots as if taken by a photographer or third party
+Each slide needs SHORT story text (3-8 words max) continuing the narrative.
+Slide 1 text must be EXACTLY: "${hook}"
+TEXT STYLE RULES (critical for authenticity):
+- Slides 2-6 text must feel like a real person typed it — lowercase preferred, imperfect, raw
+- Use specific sensory language: "my face was burning", "couldn't stop itching", "cried in the bathroom"
+- NEVER use polished marketing language: no "transformed", "journey", "incredible results"
+- Short fragments are better than complete sentences: "still burning tho" not "my skin was still burning"
+- Slide 6 closes the emotional loop from slide 1 — make it feel earned not advertised
+
+MANDATORY SLIDE TYPES (non-negotiable):
+- Slide 1: "selfie" or "mirror" — person in pain
+- Slide 2: "selfie" or "lifestyle" — person escalating
+- Slide 3: "product" — MUST be product type, no person
+- Slide 4: "app" — MUST be app type, no person. This is the CTA.
+- Slide 5: "selfie" or "lifestyle" — person showing improvement
+- Slide 6: "selfie" or "lifestyle" — person confident, outdoor if possible
+
+If you use a person-type (selfie/mirror/lifestyle) for slides 3 or 4, the output is INVALID.
+
+Return ONLY a JSON array of exactly 6 objects:
+[{"slide":1,"type":"selfie","scene":"arm extended selfie from below, bathroom background, harsh light","skin_state":"skin condition at this stage","text":"story text 3-8 words"},...]`;
+
+    const planRes = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-anthropic-key': getAnthropicKey() },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: planPrompt }] })
+    });
+    const planData = await planRes.json();
+    const clean = (planData.content?.[0]?.text || '[]').replace(/```json|```/g,'').trim();
+    slidePlan = JSON.parse(clean);
+    // Enforce slide 3=product, slide 4=app — no person shots allowed
+    if (slidePlan[2] && !['product'].includes(slidePlan[2].type)) {
+      slidePlan[2] = { ...slidePlan[2], type: 'product', scene: 'skincare products laid out on bathroom counter, overhead shot, products that were not working' };
+    }
+    if (slidePlan[3] && slidePlan[3].type !== 'app') {
+      slidePlan[3] = { ...slidePlan[3], type: 'app', scene: 'iPhone showing Aureya skincare app screen, phone on table or held up' };
+    }
+    setLog(`Story: ${slidePlan.map(s=>s.text?.slice(0,18)||s.type).join(' → ')}`, 'ok');
+  } catch(e) {
+    setLog('Story plan failed, using fallback', 'err');
+    slidePlan = [
+      { type: 'selfie', scene: 'bathroom morning harsh overhead light, oversized hoodie, tired eyes', skin_state: styleVariants[0].style, text: hook },
+      { type: 'mirror', scene: 'bathroom mirror frustrated expression, pyjama top, dim light', skin_state: styleVariants[1].style, text: 'I tried everything' },
+      { type: 'app', scene: 'on sofa at night, phone screen glow, baggy t-shirt', skin_state: styleVariants[2].style, text: 'then I found this app' },
+      { type: 'lifestyle', scene: 'bedroom desk morning, cautiously hopeful, plain sweatshirt', skin_state: styleVariants[3].style, text: 'week 2 — something shifted' },
+      { type: 'selfie', scene: 'bathroom selfie brighter mood, casual tee, natural window light', skin_state: styleVariants[4].style, text: 'week 4 — finally calming down' },
+      { type: 'selfie', scene: 'natural window light, relaxed smile, comfy jumper', skin_state: styleVariants[5].style, text: 'I finally understand my skin' },
+    ];
+  }
+
+  // ── Generate all 6 slides in PARALLEL ──────────────────────────────────
+  const acc = selectedAccountIndex !== null ? connectedAccounts[selectedAccountIndex] : null;
+  const charUrl = acc?.characterUrl || null;
+  const hasLoRA = !!acc?.loraPath;
+
+  // Sequential — each slide gets its own clean 60s window with fal.run
+  for (let i = 0; i < 6; i++) {
+    await generateSlide(i, hook, arch, falKey, acc, charUrl, hasLoRA);
+  }
+
+  setLog('All slides generated.', 'ok');
+  setProgress(100, '6/6 slides complete');
+  if (btn) { btn.disabled = false; btn.textContent = '✦ Generate all 6 slides'; }
+  document.getElementById('caption-btn').disabled = false;
+  showToast('All 6 slides generated!', 'success');
+}
+
+async function generateSlide(i, hook, arch, falKey, acc, charUrl, hasLoRA) {
+  const cell = document.getElementById(`slide-cell-${i}`);
+  cell.classList.add('generating');
+  cell.innerHTML = `<div class="slide-n">${i + 1}</div><div class="spinner-wrap"><div class="spinner"></div><div style="font-size:9px;color:var(--muted);margin-top:6px;font-family:'DM Mono',monospace;">generating...</div></div>`;
+
+  const variant = styleVariants[i];
+  const planEntry = slidePlan[i] || { type: 'selfie', scene: 'casual everyday home environment', skin_state: variant.style, text: i === 0 ? hook : variant.label };
+  const appNameVal = document.getElementById('app-name')?.value || 'Aureya';
+  const { prompt: fullPrompt, negativePrompt } = buildSlidePrompt(planEntry, variant.style, arch, hook, i, appNameVal);
+  const isHumanShot = ['selfie','mirror','lifestyle','skin_close','face','skin','before_after','app','product'].includes(planEntry.type);
+
+  setLog(`Slide ${i + 1}: ${planEntry.type} — ${(planEntry.scene||'').slice(0,50)}...`);
+
+  try {
+    const falKey2 = getFalKey();
+    const rvBody = buildRVBody(fullPrompt, isHumanShot ? charUrl : null, hasLoRA, acc?.loraPath, acc?.loraTrigger, i);
+
+    setLog(`Slide ${i + 1} · Pass 1: Generating...`);
+    const rvBodyParsed = JSON.parse(rvBody);
+    let rvData = await callFal(rvBodyParsed.endpoint, rvBodyParsed.input, falKey);
+
+    if (rvData.error || !rvData.images?.[0]) {
+      const errMsg = rvData.error ? (typeof rvData.error === 'object' ? JSON.stringify(rvData.error) : rvData.error) : 'No image returned';
+      setLog(`Slide ${i + 1} error: ${errMsg}`, 'err');
+      cell.classList.remove('generating');
+      cell.innerHTML = `<div class="slide-n">${i + 1}</div><div style="color:var(--error);font-size:10px;text-align:center;padding:8px;">${errMsg}</div>`;
+      generatedImages[i] = null;
+      return;
+    }
+
+    let currentUrl = rvData.images[0].url;
+    setLog(`Slide ${i + 1} · Pass 1 done ✓`);
+
+    cell.innerHTML = `<div class="slide-n">${i + 1}</div><img src="${currentUrl}" style="width:100%;height:100%;object-fit:cover;opacity:0.5;" /><div class="spinner-wrap" style="position:absolute;"><div class="spinner"></div></div>`;
+
+    // ── PASS 2: Crystal Upscaler (face detailer) ─────────────────────────
+    if (isHumanShot) {
+      setLog(`Slide ${i + 1} · Pass 2: Enhancing face...`);
+      try {
+        const crystalUrl = await runCrystalUpscaler(currentUrl, falKey2);
+        if (crystalUrl) { currentUrl = crystalUrl; setLog(`Slide ${i + 1} · Pass 2 done ✓`); }
+        else setLog(`Slide ${i + 1} · Pass 2 skipped (no result)`, '');
+      } catch(e2) { setLog(`Slide ${i + 1} · Pass 2 failed: ${e2.message} — continuing`, ''); }
+    }
+
+    // Pass 3 (AuraSR 4x) disabled — causes large file sizes for TikTok upload
+
+    // ── Composite text overlay ────────────────────────────────────────────
+    // Fallback story captions if Claude plan didn't supply text
+    const storyFallbacks = [
+      hook,
+      'I tried everything for years',
+      'then I found this app',
+      'week 2 — something finally shifted',
+      'week 4 — I cannot believe the difference',
+      'this is what my skin looks like now',
+    ];
+    const slideText = planEntry?.text || storyFallbacks[i] || '';
+    let finalUrl = await compositeTextOnImage(currentUrl, slideText, i, variant.label);
+
+    // For app slide, composite a real app UI overlay onto the image
+    if (planEntry?.type === 'app') {
+      const appNameOverlay = document.getElementById('app-name')?.value || 'Aureya';
+      finalUrl = await compositeAppOverlay(finalUrl, appNameOverlay);
+    }
+
+    generatedImages[i] = finalUrl;
+    cell.classList.remove('generating');
+    cell.innerHTML = `
+      <div class="slide-n">${i + 1}</div>
+      <img src="${finalUrl}" alt="slide ${i + 1}" style="width:100%;height:100%;object-fit:cover;" />
+      <div class="style-tag">${variant.label}</div>`;
+    setLog(`Slide ${i + 1} complete ✓`, 'ok');
+    setProgress(Math.round((generatedImages.filter(Boolean).length / 6) * 100), `${generatedImages.filter(Boolean).length}/6 slides complete`);
+
+  } catch (e) {
+    setLog(`Slide ${i + 1} failed: ${e.message}`, 'err');
+    cell.classList.remove('generating');
+    cell.innerHTML = `<div class="slide-n">${i + 1}</div><div style="color:var(--error);font-size:10px;text-align:center;padding:8px;">Failed — try regenerating</div>`;
+    generatedImages[i] = null;
+  }
+}
+
+
+// ─── CAPTION ─────────────────────────────────────────────────────────────────
+async function generateCaption() {
+  const hook = document.getElementById('gen-hook').value.trim();
+  const appName = document.getElementById('app-name').value.trim() || 'my app';
+  const appLine = document.getElementById('app-oneliner').value.trim();
+  const style = document.getElementById('caption-style').value;
+  const captionBtn = document.getElementById('caption-btn');
+  captionBtn.disabled = true;
+  captionBtn.textContent = 'Generating...';
+
+  const prompt = `Write a TikTok caption for a slideshow with this hook: "${hook}"
+
+App: ${appName} — ${appLine}
+Caption style: ${style}
+
+Rules:
+- Max 150 words
+- Write in lowercase, casual, imperfect — like a real person typed it on their phone, not a brand
+- Use specific sensory details: "my face was literally burning", "couldn't stop scratching", "cried in the bathroom after"
+- NEVER use polished words: no "transformed", "journey", "incredible", "amazing", "life-changing"
+- This is a personal story first — the app is mentioned briefly as what helped, not promoted
+- Ends with a question or statement that signals this is ongoing — makes people want to follow for updates
+- The ending should make viewers feel like unfollowing means missing what happens next
+- Include exactly 5 relevant hashtags at the end on a new line (format: #tag)
+- No medical claims about curing conditions
+- Use contractions and fragments: "was literally" not "was literally feeling", "idk" not "I don't know"
+- Must feel like bucket A content (real, emotional, human) not bucket B (clearly generated)
+- Do NOT start with "I" — start with a statement or observation
+
+Return ONLY the caption text followed by hashtags. No preamble.`;
+
+  try {
+    const res = await fetch('/api/claude', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-anthropic-key': getAnthropicKey()
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 400,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+    const text = data.content?.[0]?.text || '';
+    const formatted = text.replace(/(#\w+)/g, '<span class="hashtag">$1</span>');
+    document.getElementById('caption-output').innerHTML = formatted;
+    document.getElementById('caption-card').style.display = 'block';
+    showToast('Caption generated', 'success');
+  } catch (e) {
+    showToast('Caption error: ' + e.message, 'error');
+  }
+  captionBtn.disabled = false;
+  captionBtn.textContent = 'Generate caption';
+}
+
+function copyCaption() {
+  const text = document.getElementById('caption-output').innerText;
+  navigator.clipboard.writeText(text);
+  showToast('Caption copied to clipboard', 'success');
+}
+
+
+
+// ─── DIRECT TIKTOK POST ───────────────────────────────────────────────────────
+async function postDirectToTikTok(mode) {
+  const acc = selectedAccountIndex !== null ? connectedAccounts[selectedAccountIndex] : connectedAccounts[0];
+  if (!acc?.token) { showToast('No TikTok account connected — go to Accounts tab', 'error'); return; }
+
+  const valid = generatedImages.filter(Boolean);
+  if (valid.length === 0) { showToast('Generate slides first', 'error'); return; }
+
+  const isLive = mode === 'live';
+  const caption = document.getElementById('caption-output')?.innerText || '';
+  const draftBtn = document.getElementById('draft-btn');
+  const liveBtn = document.getElementById('post-btn');
+
+  if (draftBtn) draftBtn.disabled = true;
+  if (liveBtn) liveBtn.disabled = true;
+
+  const activeBtn = isLive ? liveBtn : draftBtn;
+  if (activeBtn) activeBtn.textContent = isLive ? 'Posting...' : 'Saving to drafts...';
+
+  if (acc.expiresAt && Date.now() > acc.expiresAt) {
+    showToast('TikTok token expired — please reconnect your account in the Accounts tab', 'error');
+    if (draftBtn) { draftBtn.disabled = false; draftBtn.textContent = '⬆ Save to Drafts'; }
+    if (liveBtn) { liveBtn.disabled = false; liveBtn.textContent = '✦ Post Live'; }
+    return;
   }
 
   try {
-    const { slides } = req.body || {};
-
-    if (!Array.isArray(slides) || slides.length === 0) {
-      return res.status(400).json({ error: 'slides array required' });
-    }
-
-    const urls = [];
-    const errors = [];
-
-    for (let i = 0; i < slides.length; i++) {
-      const slide = slides[i];
-      const dataUrl = slide.dataUrl || slide.data_url || slide.data;
-      const filename = slide.filename || `upload_${Date.now()}_${i}.bin`;
-
-      if (!dataUrl) {
-        errors.push({ index: i, error: 'missing dataUrl' });
-        urls.push(null);
-        continue;
-      }
-
-      const parsed = parseDataUrl(dataUrl);
-      if (!parsed) {
-        errors.push({ index: i, error: 'invalid data URL format' });
-        urls.push(null);
-        continue;
-      }
-
-      try {
-        const buffer = Buffer.from(parsed.base64, 'base64');
-
-        // If filename has no extension, append the parsed one
-        const finalFilename = /\.[a-z0-9]+$/i.test(filename)
-          ? filename
-          : `${filename}.${parsed.ext}`;
-
-        const blob = await put(finalFilename, buffer, {
-          access: 'public',
-          contentType: parsed.mime,
-          addRandomSuffix: true,
-        });
-
-        urls.push(blob.url);
-      } catch (e) {
-        console.error(`Upload failed for slide ${i}:`, e);
-        errors.push({ index: i, error: e.message });
-        urls.push(null);
-      }
-    }
-
-    return res.status(200).json({
-      urls,
-      count: urls.filter(Boolean).length,
-      total: slides.length,
-      errors: errors.length ? errors : undefined,
+    const res = await fetch('/api/tiktok-auth', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-fal-key': getFalKey()
+      },
+      body: JSON.stringify({
+        access_token: acc.token,
+        open_id: acc.openId,
+        images: valid,
+        caption,
+        posting_mode: isLive ? 'live' : 'inbox'
+      }),
     });
+
+    const raw = await res.text();
+    let data = {};
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch {
+      data = { ok: false, message: raw || `HTTP ${res.status}` };
+    }
+
+    if (!res.ok || data.ok === false || data.error) {
+      const message =
+        data.message ||
+        data.error?.message ||
+        (typeof data.error === 'string' ? data.error : '') ||
+        `TikTok request failed (${res.status})`;
+      const extra = data.log_id ? ` [log_id: ${data.log_id}]` : '';
+      throw new Error(message + extra);
+    }
+
+    const successCard = document.getElementById('draft-success-card');
+    const draftView = document.getElementById('success-card-draft');
+    const liveView = document.getElementById('success-card-live');
+    const successTitle = document.getElementById('success-card-title');
+
+    if (successCard) successCard.style.display = 'block';
+
+    if (isLive) {
+      if (successTitle) successTitle.textContent = 'Posted live — success';
+      if (draftView) draftView.style.display = 'none';
+      if (liveView) liveView.style.display = 'flex';
+    } else {
+      if (successTitle) successTitle.textContent = 'Saved to drafts — next steps';
+      if (draftView) draftView.style.display = 'flex';
+      if (liveView) liveView.style.display = 'none';
+    }
+
+    showToast(
+      isLive ? 'Posted to TikTok successfully' : 'Saved to TikTok drafts successfully',
+      'success'
+    );
   } catch (e) {
-    console.error('upload-slides error:', e);
-    return res.status(500).json({
-      error: e.message || 'Upload failed',
+    showToast('Post failed: ' + e.message, 'error');
+  }
+
+  if (draftBtn) { draftBtn.disabled = false; draftBtn.textContent = '⬆ Save to Drafts'; }
+  if (liveBtn) { liveBtn.disabled = false; liveBtn.textContent = '✦ Post Live'; }
+}
+
+// ─── SCHEDULER ────────────────────────────────────────────────────────────────
+let schedConfig = JSON.parse(localStorage.getItem('larry_schedule') || 'null');
+
+function planPostingTimes(postsPerDay, windowStart, windowEnd) {
+  const now = new Date();
+  const start = new Date(now); start.setHours(windowStart, 0, 0, 0);
+  const end   = new Date(now); end.setHours(windowEnd, 0, 0, 0);
+  const windowMs = end - start;
+  const slotMs = windowMs / postsPerDay;
+  const times = [];
+  for (let i = 0; i < postsPerDay; i++) {
+    const center = start.getTime() + i * slotMs + slotMs / 2;
+    const jitter = (Math.random() * 2 - 1) * slotMs * 0.28;
+    const t = Math.round(center + jitter);
+    if (t > Date.now()) times.push(t);
+  }
+  return times.sort((a, b) => a - b);
+}
+
+function schedUpdatePreview() {
+  const postsPerDay = parseInt(document.getElementById('sched-posts-per-day')?.value) || 12;
+  const windowStart = parseInt(document.getElementById('sched-window-start')?.value) || 8;
+  const windowEnd   = parseInt(document.getElementById('sched-window-end')?.value)   || 22;
+  const times = planPostingTimes(postsPerDay, windowStart, windowEnd);
+  const preview = document.getElementById('sched-time-preview');
+  if (!preview) return;
+  const fmt = ms => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  preview.innerHTML = `<span style="color:var(--accent);">Today's ${times.length} slots:</span>  ` +
+    times.map((t, i) => `${i+1}. ${fmt(t)}`).join('  ·  ');
+}
+
+function schedRenderAccountRotation() {
+  const div = document.getElementById('sched-account-rotation');
+  if (!div) return;
+  if (connectedAccounts.length === 0) {
+    div.innerHTML = '<div style="font-size:12px;color:var(--muted);">No accounts connected yet</div>';
+    return;
+  }
+  div.innerHTML = connectedAccounts.map((acc, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);font-size:13px;">
+      ${acc.characterUrl ? `<img src="${acc.characterUrl}" style="width:28px;height:36px;object-fit:cover;border-radius:4px;" />` : `<div style="width:28px;height:36px;background:#222;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted);">${i+1}</div>`}
+      <div>
+        <div style="font-size:13px;">${acc.label}</div>
+        <div style="font-size:10px;font-family:'DM Mono',monospace;color:${acc.openId ? 'var(--success)' : 'var(--error)'};">${acc.openId ? '✓ connected' : '✗ not connected'}</div>
+      </div>
+    </div>`).join('');
+}
+
+function schedRenderAccountDropdown() {
+  const sel = document.getElementById('sched-post-account');
+  if (!sel) return;
+  sel.innerHTML = connectedAccounts.length === 0
+    ? '<option value="">No accounts connected</option>'
+    : connectedAccounts.map((acc, i) => `<option value="${i}">${acc.label}${acc.openId ? ' ✓' : ' (no TikTok)'}</option>`).join('');
+}
+
+function schedCheckSlidesReady() {
+  const valid = (generatedImages || []).filter(Boolean);
+  const noSlides   = document.getElementById('sched-no-slides');
+  const slideReady = document.getElementById('sched-slide-ready');
+  if (!noSlides || !slideReady) return;
+  if (valid.length === 0) { noSlides.style.display = 'block'; slideReady.style.display = 'none'; return; }
+  noSlides.style.display = 'none'; slideReady.style.display = 'block';
+  const thumbs = document.getElementById('sched-slide-thumbs');
+  if (thumbs) thumbs.innerHTML = valid.map(url => `<div style="flex-shrink:0;width:40px;height:54px;border-radius:4px;overflow:hidden;border:1px solid var(--border);"><img src="${url}" style="width:100%;height:100%;object-fit:cover;" /></div>`).join('');
+  const captionEl = document.getElementById('caption-output');
+  const schedCaption = document.getElementById('sched-caption');
+  if (captionEl?.innerText && schedCaption && !schedCaption.value) schedCaption.value = captionEl.innerText;
+}
+
+async function saveSchedule() {
+  const postsPerDay = parseInt(document.getElementById('sched-posts-per-day').value) || 12;
+  const windowStart = parseInt(document.getElementById('sched-window-start').value) || 8;
+  const windowEnd   = parseInt(document.getElementById('sched-window-end').value)   || 22;
+  const config = { postsPerDay, windowStart, windowEnd, enabled: true, rotateAccounts: true };
+  localStorage.setItem('larry_schedule', JSON.stringify(config));
+  schedConfig = config;
+  try {
+    const res = await fetch('/api/schedule', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
+    const data = await res.json();
+    if (data.ok) {
+      const st = document.getElementById('sched-status');
+      if (st) { st.textContent = '✓ Saved'; st.style.color = 'var(--success)'; setTimeout(() => { st.textContent = ''; }, 3000); }
+      showToast('Schedule saved!', 'success');
+      schedUpdatePreview();
+    }
+  } catch(e) { showToast('Could not reach server — saved locally', ''); }
+}
+
+async function addToQueue() {
+  const valid = (generatedImages || []).filter(Boolean);
+  if (valid.length === 0) { showToast('No slides to queue', 'error'); return; }
+  const accountIndex = parseInt(document.getElementById('sched-post-account').value) || 0;
+  const acc = connectedAccounts[accountIndex];
+  if (!acc) { showToast('No account found', 'error'); return; }
+  if (!acc.token) { showToast(`${acc.label} has no TikTok token — connect TikTok first`, 'error'); return; }
+
+  const caption    = document.getElementById('sched-caption').value.trim();
+  const customTime = document.getElementById('sched-custom-time').value;
+
+  let scheduledFor;
+  if (customTime) {
+    scheduledFor = new Date(customTime).getTime();
+  } else {
+    const cfg   = schedConfig || { postsPerDay: 12, windowStart: 8, windowEnd: 22 };
+    const slots = planPostingTimes(cfg.postsPerDay, cfg.windowStart, cfg.windowEnd);
+    const used  = (window.__serverQueue || []).map(j => j.scheduledFor);
+    scheduledFor = slots.find(t => !used.some(u => Math.abs(u - t) < 60000) && t > Date.now())
+                   || (Date.now() + 5 * 60 * 1000);
+  }
+
+  // Bug 3 fix: include posting_mode so cron.js knows draft vs live
+  const postingMode = document.getElementById('sched-posting-mode')?.value || 'inbox';
+
+  const job = {
+    id: `job_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+    images: valid,
+    caption,
+    accountIndex,
+    accountToken: acc.token,
+    scheduledFor,
+    hook: document.getElementById('gen-hook')?.value || '',
+    accountLabel: acc.label,
+    status: 'pending',
+    posting_mode: postingMode,
+  };
+
+  if (!window.__serverQueue) window.__serverQueue = [];
+  window.__serverQueue.push(job);
+  window.__serverQueue.sort((a, b) => a.scheduledFor - b.scheduledFor);
+  renderQueueList();
+
+  try {
+    await fetch('/api/queue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'add', jobs: [job] }) });
+    showToast(`Queued for ${new Date(scheduledFor).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`, 'success');
+    document.getElementById('sched-custom-time').value = '';
+  } catch(e) { showToast('Queue error: ' + e.message, 'error'); }
+}
+
+async function refreshQueue() {
+  try {
+    const res = await fetch('/api/queue');
+    const data = await res.json();
+    window.__serverQueue  = data.queue  || [];
+    window.__serverPosted = data.posted || [];
+    renderQueueList();
+    renderPostLog();
+  } catch(e) { /* silent */ }
+}
+
+function renderQueueList() {
+  const list  = document.getElementById('queue-list');
+  const badge = document.getElementById('queue-count-badge');
+  const queue = window.__serverQueue || [];
+  if (!list) return;
+  if (queue.length === 0) {
+    list.innerHTML = '<div style="font-size:13px;color:var(--muted);text-align:center;padding:20px;">Queue is empty</div>';
+    if (badge) badge.style.display = 'none'; return;
+  }
+  if (badge) { badge.textContent = queue.length; badge.style.display = 'inline'; }
+  const fmt = ms => new Date(ms).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const statusColor = s => s === 'posted' ? 'var(--success)' : s === 'failed' ? 'var(--error)' : 'var(--accent)';
+  const statusBg    = s => s === 'posted' ? 'rgba(74,222,128,0.1)' : s === 'failed' ? 'rgba(248,113,113,0.1)' : 'rgba(200,255,90,0.08)';
+  list.innerHTML = queue.map(job => `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:0.5px solid var(--border);">
+      <div style="flex-shrink:0;width:32px;height:44px;border-radius:4px;overflow:hidden;border:1px solid var(--border);background:#111;">
+        ${job.images?.[0] ? `<img src="${job.images[0]}" style="width:100%;height:100%;object-fit:cover;" />` : ''}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${job.hook || job.caption?.slice(0,60) || 'Slideshow'}</div>
+        <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);">${job.accountLabel || 'Account '+job.accountIndex} · ${fmt(job.scheduledFor)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:10px;font-family:'DM Mono',monospace;padding:3px 8px;border-radius:100px;background:${statusBg(job.status)};color:${statusColor(job.status)};">${job.status||'pending'}</span>
+        <button onclick="removeQueueJob('${job.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 4px;">×</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderPostLog() {
+  const list   = document.getElementById('post-log-list');
+  const posted = window.__serverPosted || [];
+  if (!list) return;
+  if (posted.length === 0) { list.innerHTML = '<div style="font-size:13px;color:var(--muted);text-align:center;padding:20px;">No posts yet</div>'; return; }
+  const fmt = ms => new Date(ms).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  list.innerHTML = posted.map(job => `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:0.5px solid var(--border);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${job.hook || job.caption?.slice(0,60) || 'Slideshow'}</div>
+        <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);">${job.accountLabel || 'Account '+job.accountIndex} · posted ${fmt(job.postedAt)}</div>
+      </div>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;padding:3px 8px;border-radius:100px;background:rgba(74,222,128,0.1);color:var(--success);">✓ posted</span>
+    </div>`).join('');
+}
+
+async function removeQueueJob(jobId) {
+  if (window.__serverQueue) window.__serverQueue = window.__serverQueue.filter(j => j.id !== jobId);
+  renderQueueList();
+  try { await fetch('/api/queue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'remove', jobId }) }); } catch(e) {}
+}
+
+async function clearQueue() {
+  if (!confirm('Clear all queued posts?')) return;
+  window.__serverQueue = [];
+  renderQueueList();
+  try { await fetch('/api/queue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'clear' }) }); showToast('Queue cleared', ''); } catch(e) {}
+}
+
+function logPerformance() {
+  const hook = document.getElementById('log-hook').value.trim();
+  const views = parseInt(document.getElementById('log-views').value) || 0;
+  const lesson = document.getElementById('log-lesson').value.trim();
+  if (!hook) { showToast('Enter a hook', 'error'); return; }
+  performanceLogs.unshift({ hook, views, lesson, date: new Date().toLocaleDateString() });
+  localStorage.setItem('larry_logs', JSON.stringify(performanceLogs));
+  document.getElementById('log-hook').value = '';
+  document.getElementById('log-views').value = '';
+  document.getElementById('log-lesson').value = '';
+  renderPerfTable();
+  showToast('Result logged', 'success');
+}
+
+function renderPerfTable() {
+  const tbody = document.getElementById('perf-tbody');
+  if (performanceLogs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">No posts logged yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = performanceLogs.map((l, i) => {
+    const cls = l.views >= 100000 ? 'high' : l.views >= 10000 ? 'mid' : 'low';
+    const hasFormula = /dermatologist|mum|mom|partner|flatmate|friend|sister|boyfriend|girlfriend|wife|husband|showed|stopped/i.test(l.hook);
+    return `<tr>
+      <td><div class="hook-preview">${l.hook}</div>${l.lesson ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;">→ ${l.lesson}</div>` : ''}</td>
+      <td><span class="view-count ${cls}">${l.views.toLocaleString()}</span></td>
+      <td style="font-size:11px;color:${hasFormula ? 'var(--success)' : 'var(--muted)'}">${hasFormula ? '✓ formula' : '—'}</td>
+      <td><button class="btn btn-danger" onclick="deleteLog(${i})">×</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function deleteLog(i) {
+  performanceLogs.splice(i, 1);
+  localStorage.setItem('larry_logs', JSON.stringify(performanceLogs));
+  renderPerfTable();
+}
+
+// ─── CONVERT TO VIDEO & POST ─────────────────────────────────────────────────
+
+
+
+
+// ─── AUTO GENERATE SLIDE TEXTS ───────────────────────────────────────────────
+async function generateSlideTexts() {
+  const hook = document.getElementById('gen-hook').value.trim();
+  if (!hook) { showToast('Enter a hook first', 'error'); return; }
+
+  const antKey = getAnthropicKey();
+  if (!antKey) { showToast('Add your Anthropic key', 'error'); return; }
+
+  const appName = document.getElementById('app-name')?.value || 'Aureya';
+  const audience = document.getElementById('app-audience')?.value || 'women with sensitive skin';
+  const acc = selectedAccountIndex !== null ? connectedAccounts[selectedAccountIndex] : null;
+  const charDesc = acc?.desc || 'woman in her late 20s';
+
+  const btn = event?.target;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Planning story...'; }
+
+  try {
+    const res = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-anthropic-key': antKey },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1500,
+        messages: [{ role: 'user', content: `You are planning a viral TikTok skincare slideshow that tells a story across 6 slides.
+
+Hook: "${hook}"
+App: ${appName} — AI skincare for sensitive/eczema/rosacea skin
+Character: ${charDesc}
+
+RULES FOR STORY STRUCTURE:
+- Tell a narrative arc: Problem → Struggle → Discovery → Progress → Transformation
+- EVERY slide must have SHORT on-screen text (3–8 words max). No silent slides.
+- Vary the scene for every slide — different location, activity, outfit context
+- Use REAL LIFE scenarios — not just portraits. Think: bathroom mirror selfie, in the car, at a desk, in bed, in a supermarket, on the sofa, making tea, walking outside
+- Zoom level varies: some shots are selfie-style (waist up), some are environmental (person in a scene), ONE close-up skin texture shot max
+- Slide 1: Hook moment — relatable everyday scene where the skin problem is visible
+- Slide 2-3: The struggle shown in real life (mirrors, reactions, hiding skin)
+- Slide 4: Discovery / turning point (phone showing the app, or products laid out)
+- Slide 5: Progress — same type of scene as slide 1 but visibly improving
+- Slide 6: After — confident, different setting, transformation complete
+
+AVAILABLE SCENE TYPES:
+- "selfie" — casual selfie style, waist-up or shoulder-up, natural background
+- "mirror" — looking at bathroom or bedroom mirror, can see reflection
+- "lifestyle" — full environmental shot, person doing something (cooking, driving, at desk, in bed, on sofa)
+- "skin_close" — ONE extreme skin texture close-up (use max once)
+- "product" — skincare products flat lay or on shelf, no person needed
+- "app" — iPhone showing ${appName} app, person holding phone
+
+Return ONLY a JSON array of exactly 6 objects:
+[
+  {
+    "slide": 1,
+    "type": "selfie",
+    "scene": "bathroom morning selfie, tired eyes, visible redness on cheeks, messy hair, oversized t-shirt",
+    "skin_state": "inflamed, red, irritated",
+    "text": "my skin was doing THIS every morning"
+  },
+  ...
+]
+
+Each object needs: slide, type, scene (detailed location + outfit + activity + lighting), skin_state (for this stage of the journey), text (on-screen words, max 8 words).
+Slide 1 text must be the exact hook: "${hook}"` }]
+      })
     });
+
+    const data = await res.json();
+    const raw = data.content?.[0]?.text || '[]';
+    const clean = raw.replace(/```json|```/g, '').trim();
+    slidePlan = JSON.parse(clean);
+
+    // Show plan preview
+    const preview = document.getElementById('slide-plan-preview');
+    if (preview) {
+      preview.style.display = 'block';
+      const typeIcon = { selfie: '🤳', mirror: '🪞', lifestyle: '🏠', skin_close: '🔬', product: '✨', app: '📱' };
+      preview.innerHTML = '<div style="font-size:11px;color:var(--muted);font-family:DM Mono,monospace;margin-bottom:8px;">STORY PLAN</div>' +
+        slidePlan.map(s => `
+          <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:0.5px solid var(--border);">
+            <div style="width:20px;height:20px;border-radius:50%;background:var(--accent);color:var(--black);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">${s.slide}</div>
+            <div style="flex:1;">
+              <div style="font-size:10px;color:var(--accent);font-family:DM Mono,monospace;">${typeIcon[s.type] || '📷'} ${s.type.toUpperCase()} · ${s.skin_state || ''}</div>
+              <div style="font-size:12px;color:rgba(245,242,236,0.7);margin-top:2px;">${s.scene}</div>
+              <div style="font-size:12px;color:var(--white);font-weight:500;margin-top:3px;">"${s.text}"</div>
+            </div>
+          </div>`).join('');
+    }
+
+    showToast('Story plan ready!', 'success');
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '✦ Auto-plan all 6 slides with Claude'; }
+}
+
+// ─── DOWNLOAD SLIDES ─────────────────────────────────────────────────────────
+function downloadAllSlides() {
+  const valid = generatedImages.filter(Boolean);
+  if (valid.length === 0) { showToast('No slides to download', 'error'); return; }
+  valid.forEach((url, i) => {
+    setTimeout(() => {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `aureya-slide-${i + 1}.png`;
+      a.click();
+    }, i * 300);
+  });
+  // Also copy caption automatically
+  const captionEl = document.getElementById('caption-output');
+  if (captionEl && captionEl.innerText) {
+    navigator.clipboard.writeText(captionEl.innerText).catch(() => {});
+  }
+  document.getElementById('draft-success-card').style.display = 'block';
+  showToast(`${valid.length} slides downloaded · caption copied!`, 'success');
+}
+
+// ─── CHARACTER GENERATION ────────────────────────────────────────────────────
+let pendingCharacterUrl = null;
+let pendingCharacterDesc = '';
+let slidePlan = [];
+let selectedAccountIndex = null;
+
+async function generateCharacter() {
+  const skinType = document.getElementById('character-skin').value;
+  const vibe = document.getElementById('character-vibe').value;
+  const falKey = getFalKey();
+  const antKey = getAnthropicKey();
+
+  if (!falKey) { showToast('Add your FAL API key', 'error'); return; }
+  if (!antKey) { showToast('Add your Anthropic API key', 'error'); return; }
+
+  const btn = document.getElementById('gen-char-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner spinner-sm"></div> Writing character...';
+
+  const skinMap = {
+    rosacea: 'rosacea-prone skin, subtle persistent redness across cheeks and nose bridge, visible broken capillaries, slightly reactive and sensitised complexion',
+    eczema: 'eczema-prone skin, dry sensitised complexion, faint dry patches near jawline and eyebrows, skin that looks like it needs moisture',
+    both: 'rosacea and eczema-prone skin, redness across cheeks and nose, dry reactive patches, sensitised complexion that looks uncomfortable',
+    sensitive: 'sensitive skin, delicate reactive complexion, naturally uneven tone, skin that flushes easily',
+  };
+
+  const vibeMap = {
+    everyday: 'woman in her late 20s, natural brown hair, warm hazel or brown eyes, medium skin tone',
+    professional: 'woman in her early 30s, dark hair neatly styled, sharp features, medium to olive skin tone',
+    young: 'woman in her early 20s, lighter hair with natural texture, bright eyes, fair to medium skin tone',
+    mature: 'woman in her late 30s, natural hair with warmth, soft features, medium skin tone',
+    diverse: 'woman in her late 20s, South Asian heritage, dark brown eyes, dark hair, warm medium-deep skin tone',
+    diverse2: 'woman in her late 20s, East Asian heritage, dark straight hair, dark eyes, light to medium skin tone',
+    diverse3: 'woman in her late 20s, Black British heritage, dark eyes, natural hair texture, deep warm skin tone',
+  };
+
+  // Step 1: Claude generates the character core descriptor
+  let desc = '';
+  try {
+    const res = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-anthropic-key': antKey },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 80,
+        messages: [{ role: 'user', content: `Write a short physical description for an AI portrait subject. Base: ${vibeMap[vibe]}. Vary the specific hair shade, eye colour, and one distinguishing feature (e.g. subtle freckles, soft jawline, arched brows). Return ONLY the descriptor, under 25 words, no intro.` }]
+      })
+    });
+    const data = await res.json();
+    desc = data.content?.[0]?.text?.trim() || vibeMap[vibe];
+
+    document.getElementById('char-desc-text').textContent = desc;
+    document.getElementById('char-desc-preview').style.display = 'block';
+  } catch(e) {
+    desc = vibeMap[vibe]; // fallback
+  }
+
+  // Step 2: Build hyper-realistic prompt using the JSON structure
+  btn.innerHTML = '<div class="spinner spinner-sm"></div> Generating image...';
+
+  const skinDetail = skinMap[skinType];
+
+  // FLUX prompt — clean natural language, no SD weighted syntax
+  // Strip any weighted syntax from arch desc if present
+  const archDesc = (document.getElementById('arch-desc')?.value || '').replace(/\([^)]+:\d+(\.\d+)?\)/g, '').replace(/\s+/g, ' ').trim();
+  const baseDesc = archDesc || `portrait of a ${desc}, visible pores, fine peach fuzz, natural sebum and oily sheen, subtle imperfections, no makeup, natural soft window light, shallow depth of field, looking directly at camera, ultra-detailed skin texture`;
+  const prompt = `Photorealistic ${baseDesc}, ${desc}, ${skinDetail}, raw unedited skin, phone camera photo, authentic UGC aesthetic, cinematic realism`;
+
+  try {
+    // Pass 1: Generate character with FLUX Dev (best photorealism on FAL)
+    const data = await callFal('fal-ai/flux-lora', {
+      prompt,
+      image_size: 'portrait_4_3',
+      num_inference_steps: 28,
+      guidance_scale: 3.5,
+      num_images: 1,
+      output_format: 'jpeg',
+      enable_safety_checker: false,
+      loras: [],
+    }, falKey);
+    if (!data.images?.[0]?.url) throw new Error(JSON.stringify(data.error || data));
+
+    let charUrl = data.images[0].url;
+
+    // Pass 2: Crystal face enhancement
+    btn.innerHTML = '<div class="spinner spinner-sm"></div> Enhancing face...';
+    try {
+      const enhanced = await runCrystalUpscaler(charUrl, falKey);
+      if (enhanced) charUrl = enhanced;
+    } catch(e) { /* use raw if crystal fails */ }
+
+    pendingCharacterUrl = charUrl;
+    pendingCharacterDesc = desc;
+    document.getElementById('char-preview-img').src = pendingCharacterUrl;
+    document.getElementById('char-preview').style.display = 'block';
+    showToast('Character generated!', 'success');
+  } catch(e) {
+    showToast('Image generation error: ' + e.message, 'error');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '✦ Generate character';
+}
+
+function saveCharacterToAccount() {
+  const label = document.getElementById('account-label').value.trim();
+  const skinType = document.getElementById('character-skin').value;
+
+  if (!label) { showToast('Enter an account nickname', 'error'); return; }
+  if (!pendingCharacterUrl) { showToast('Generate a character first', 'error'); return; }
+
+  connectedAccounts.push({
+    label,
+    desc: pendingCharacterDesc,
+    skinType,
+    characterUrl: pendingCharacterUrl,
+    token: null,
+    openId: null
+  });
+  saveAccounts();
+  renderAccounts();
+  renderAccountSelector();
+
+  // Reset form
+  document.getElementById('account-label').value = '';
+  document.getElementById('char-preview').style.display = 'none';
+  document.getElementById('char-desc-preview').style.display = 'none';
+  document.getElementById('char-desc-text').textContent = '';
+  pendingCharacterUrl = null;
+  pendingCharacterDesc = '';
+  showToast('Account saved with character!', 'success');
+}
+
+function selectAccount(index) {
+  selectedAccountIndex = index;
+  const acc = connectedAccounts[index];
+
+  // Update selector UI
+  document.querySelectorAll('.account-chip').forEach((c, i) => {
+    c.style.borderColor = i === index ? 'var(--accent)' : 'var(--border)';
+    c.style.color = i === index ? 'var(--accent)' : 'var(--muted)';
+  });
+
+  // Show character preview
+  const preview = document.getElementById('selected-char-preview');
+  const img = document.getElementById('selected-char-img');
+  const name = document.getElementById('selected-account-name');
+  if (acc.characterUrl) {
+    img.src = acc.characterUrl;
+    name.textContent = acc.label;
+    preview.style.display = 'flex';
   }
 }
+
+function renderAccountSelector() {
+  const selector = document.getElementById('account-selector');
+  const noMsg = document.getElementById('no-account-msg');
+  if (!selector) return;
+
+  if (connectedAccounts.length === 0) {
+    selector.innerHTML = '';
+    if (noMsg) noMsg.style.display = 'block';
+    return;
+  }
+  if (noMsg) noMsg.style.display = 'none';
+
+  selector.innerHTML = connectedAccounts.map((acc, i) => `
+    <div class="account-chip" onclick="selectAccount(${i})" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--border-radius-lg);border:1.5px solid var(--border);cursor:pointer;transition:all 0.15s;">
+      ${acc.characterUrl ? `<img src="${acc.characterUrl}" style="width:32px;height:40px;object-fit:cover;border-radius:4px;" />` : '<div style="width:32px;height:40px;background:var(--input-bg);border-radius:4px;"></div>'}
+      <div>
+        <div style="font-size:13px;font-weight:500;">${acc.label}</div>
+        <div style="font-size:10px;color:var(--muted);">${acc.skinType || 'sensitive'}</div>
+      </div>
+    </div>
+  `).join('');
+
+  // Auto-select first account
+  if (selectedAccountIndex === null && connectedAccounts.length > 0) {
+    selectAccount(0);
+  }
+}
+
+// ─── ACCOUNT MANAGEMENT ──────────────────────────────────────────────────────
+let connectedAccounts = JSON.parse(localStorage.getItem('larry_accounts') || '[]');
+let pendingAccountLabel = '';
+
+function saveAccounts() {
+  localStorage.setItem('larry_accounts', JSON.stringify(connectedAccounts));
+}
+
+function startAccountConnect() {
+  const label = document.getElementById('account-label').value.trim();
+  if (!label) { showToast('Enter an account nickname first', 'error'); document.getElementById('account-label').focus(); return; }
+  // Store all pending account data before redirect
+  localStorage.setItem('pending_account_label', label);
+  localStorage.setItem('pending_account_desc', pendingCharacterDesc);
+  localStorage.setItem('pending_account_skin', document.getElementById('character-skin').value);
+  localStorage.setItem('pending_account_char', pendingCharacterUrl || '');
+  window.location.href = '/api/tiktok-auth';
+}
+
+function connectTikTokToExisting(index) {
+  const acc = connectedAccounts[index];
+  if (!acc) { alert('Account not found at index ' + index); return; }
+  console.log('Connecting TikTok to:', acc.label, 'index:', index);
+  localStorage.setItem('pending_account_label', acc.label);
+  localStorage.setItem('pending_account_desc', acc.desc || '');
+  localStorage.setItem('pending_account_skin', acc.skinType || 'sensitive');
+  localStorage.setItem('pending_account_char', acc.characterUrl || '');
+  localStorage.setItem('pending_connect_existing', index.toString());
+  console.log('Redirecting to /api/tiktok-auth');
+  window.location.href = '/api/tiktok-auth';
+}
+
+function renderAccounts() {
+  const list = document.getElementById('accounts-list');
+  const noAccounts = document.getElementById('no-accounts');
+  const postList = document.getElementById('post-to-accounts-list');
+  const multiPostBtn = document.getElementById('multi-post-btn');
+  if (!list) return;
+
+  if (connectedAccounts.length === 0) {
+    list.innerHTML = '';
+    if (noAccounts) noAccounts.style.display = 'block';
+    if (postList) postList.innerHTML = '';
+    if (multiPostBtn) multiPostBtn.disabled = true;
+    return;
+  }
+
+  if (noAccounts) noAccounts.style.display = 'none';
+  if (multiPostBtn) multiPostBtn.disabled = false;
+
+  list.innerHTML = connectedAccounts.map((acc, i) => `
+    <div style="padding:14px 0;border-bottom:0.5px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:12px;">
+        ${acc.characterUrl
+          ? `<img src="${acc.characterUrl}" style="width:44px;height:58px;object-fit:cover;border-radius:6px;border:1.5px solid rgba(200,255,90,0.4);" />`
+          : `<div style="width:44px;height:58px;border-radius:6px;background:rgba(200,255,90,0.1);border:1px solid rgba(200,255,90,0.3);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:500;color:var(--accent);">${acc.label.charAt(0).toUpperCase()}</div>`
+        }
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:500;">${acc.label}</div>
+          <div style="font-size:11px;color:var(--muted);">${acc.desc || acc.skinType || ''}</div>
+          <div style="font-size:11px;font-family:'DM Mono',monospace;color:${acc.loraPath ? '#4ade80' : acc.openId ? 'var(--muted)' : 'var(--muted)'};">
+            ${acc.loraPath ? '✓ LoRA trained — max consistency' : acc.openId ? 'TikTok connected' : 'No TikTok connected'}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+          <button onclick="connectTikTokToExisting(${i})" style="font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid rgba(200,255,90,0.4);background:none;color:${acc.openId ? '#4ade80' : 'var(--accent)'};cursor:pointer;white-space:nowrap;">${acc.openId ? '✓ Reconnect TikTok' : 'Connect TikTok'}</button>
+          ${!acc.loraPath ? `
+            <div style="margin-top:6px;">
+              <button onclick="window.open('https://fal.ai/models/fal-ai/flux-lora-fast-training', '_blank')" style="font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:none;color:var(--muted);cursor:pointer;white-space:nowrap;">⚡ Train LoRA on fal.ai ↗</button>
+              <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5;">Train on <a href="https://fal.ai/models/fal-ai/flux-lora-fast-training" target="_blank" style="color:var(--accent);text-decoration:none;">fal.ai</a>, then paste the model URL below.</div>
+              <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
+                <input type="text" id="lora-url-${i}" placeholder="Paste trained LoRA URL here..." 
+                  style="font-size:11px;padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:#111;color:var(--white);font-family:DM Mono,monospace;flex:1;margin:0;"
+                />
+                <button onclick="saveLoRAUrl(${i})" style="font-size:11px;padding:6px 12px;border-radius:6px;border:1px solid rgba(200,255,90,0.3);background:none;color:var(--accent);cursor:pointer;white-space:nowrap;">Save</button>
+              </div>
+            </div>` : ''}
+          ${acc.loraPath ? `<div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+            <span style="font-size:10px;color:#4ade80;font-family:'DM Mono',monospace;">⚡ LoRA active</span>
+            <button onclick="removeLoRA(${i})" style="font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.1);background:none;color:var(--muted);cursor:pointer;">remove</button>
+          </div>` : ''}
+          <button onclick="removeAccount(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;">×</button>
+        </div>
+      </div>
+      ${acc.loraTraining ? `<div style="margin-top:8px;font-size:11px;color:var(--warning);font-family:'DM Mono',monospace;">⏳ Training in progress — check back in ~20 minutes</div>` : ''}
+    </div>
+  `).join('');
+
+  if (postList) {
+    postList.innerHTML = connectedAccounts.map((acc, i) => `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <input type="checkbox" id="post-acc-${i}" checked style="width:16px;height:16px;cursor:pointer;" />
+        <label for="post-acc-${i}" style="font-size:14px;cursor:pointer;">${acc.label}</label>
+      </div>
+    `).join('');
+  }
+}
+
+function removeAccount(i) {
+  connectedAccounts.splice(i, 1);
+  saveAccounts();
+  renderAccounts();
+  updateTikTokBtn(connectedAccounts.length > 0);
+}
+
+function postToSelectedAccounts() {
+  const valid = generatedImages.filter(Boolean);
+  if (valid.length === 0) { showToast('Generate slides first in the Generate tab', 'error'); return; }
+
+  const selected = connectedAccounts.filter((_, i) => {
+    const cb = document.getElementById(`post-acc-${i}`);
+    return cb && cb.checked;
+  });
+
+  if (selected.length === 0) { showToast('Select at least one account', 'error'); return; }
+
+  // Download slides for each selected account
+  selected.forEach((acc, si) => {
+    const slug = acc.label.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+    valid.forEach((url, i) => {
+      setTimeout(() => {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${slug}-slide-${i + 1}.png`;
+        a.click();
+      }, (si * valid.length + i) * 350);
+    });
+  });
+
+  const caption = document.getElementById('caption-output')?.innerText;
+  if (caption) navigator.clipboard.writeText(caption).catch(() => {});
+
+  showToast(`Slides downloaded for ${selected.length} account${selected.length > 1 ? 's' : ''} · caption copied!`, 'success');
+}
+
+// ─── BULK GENERATE ────────────────────────────────────────────────────────────
+async function bulkGenerate() {
+  const falKey2 = getFalKey();
+  if (!falKey2) { showToast('Add your FAL API key', 'error'); return; }
+
+  const count = parseInt(document.getElementById('bulk-count').value);
+  const hookBank = document.getElementById('bulk-hooks').value.trim().split('\n').filter(h => h.trim());
+  const arch = document.getElementById('arch-desc').value.trim();
+
+  if (!arch) { showToast('Add architecture description in Setup', 'error'); return; }
+
+  const btn = document.getElementById('bulk-btn');
+  btn.disabled = true;
+  document.getElementById('bulk-progress').style.display = 'block';
+  document.getElementById('bulk-log').innerHTML = '';
+
+  const bulkLog = (msg, type='') => {
+    const el = document.getElementById('bulk-log');
+    const div = document.createElement('div');
+    div.className = type ? `log-${type}` : '';
+    div.textContent = '> ' + msg;
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+  };
+
+  const setBulkProgress = (pct, label) => {
+    document.getElementById('bulk-progress-bar').style.width = pct + '%';
+    document.getElementById('bulk-progress-label').textContent = label;
+  };
+
+  // Auto-generate hooks if bank is empty or insufficient
+  let hooks = [...hookBank];
+  if (hooks.length < count) {
+    bulkLog(`Generating ${count - hooks.length} hooks with Claude...`, 'info');
+    try {
+      const context = document.getElementById('hook-context').value || 'Aureya — AI skincare for eczema/rosacea';
+      const hookRes = await fetch('/api/claude', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-anthropic-key': getAnthropicKey() },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: `You are a viral TikTok content strategist for sensitive skincare (eczema/rosacea).
+
+PROVEN WINNING HOOK FORMULA:
+[Specific time period] + [specific embarrassing behaviour caused by skin] + [unexpected real-world source] + [open loop ending]
+
+Example: "I spent 6 months avoiding mirrors because of my rosacea until a random girl at Sephora told me about this"
+
+Generate ${count - hooks.length} unique hooks following this exact formula. Rules:
+- Always include a specific time period (3 weeks, 6 months, 2 years — never vague)
+- Always include a visceral, specific physical or emotional pain behaviour — the more specific the better
+- The source must feel unexpected and real (stranger, coworker, neighbour — never a doctor or ad)
+- End with an UNRESOLVED open loop — viewer cannot guess what happens next ("told me about this", "explained what I was doing wrong", "showed me something that changed everything")
+- NEVER write a hook where the viewer can already guess the ending
+- Use sensory language — burned, raw, hiding, crying, embarrassed — triggers emotional retention
+- Never mention an app, AI, or product directly
+- Natural first-person conversational English — sounds like a real person texting a friend
+
+Context: ${context}
+
+Return ONLY a JSON array of strings. No preamble, no markdown.` }]
+        })
+      });
+      const hookData = await hookRes.json();
+      const hookText = hookData.content?.[0]?.text || '[]';
+      const generated = JSON.parse(hookText.replace(/\`\`\`json|\`\`\`/g,'').trim());
+      hooks = [...hooks, ...generated].slice(0, count);
+    } catch(e) {
+      bulkLog('Hook generation failed: ' + e.message + ' — using fallback hooks', 'err');
+      const fallbacks = [
+        'I spent 8 months cancelling plans because of my rosacea until a stranger at the pharmacy told me about this',
+        'I wasted $400 on products that made my eczema worse until my neighbour noticed and said something',
+        'I wore turtlenecks in summer for 6 months to hide my neck eczema until a woman at the gym told me to stop',
+        'I turned down a promotion because I was too embarrassed about my skin flaring until a coworker changed everything',
+        'I stopped going to the gym for 4 months because of my rosacea until a random woman in the changing room said this',
+      ];
+      hooks = [...hooks, ...fallbacks].slice(0, count);
+    }
+  }
+
+  const allSlideshows = [];
+
+  try {
+  for (let s = 0; s < count; s++) {
+    const hook = hooks[s] || `Slideshow ${s+1}`;
+    bulkLog(`Slideshow ${s+1}/${count}: "${hook.slice(0,40)}..."`, 'info');
+    setBulkProgress((s / count) * 100, `Generating slideshow ${s+1} of ${count}...`);
+
+    // Use same Claude planning as single generator
+    let bulkPlan = [];
+    try {
+      const appName = document.getElementById('app-name')?.value || 'Aureya';
+      const acc2 = selectedAccountIndex !== null ? connectedAccounts[selectedAccountIndex] : null;
+      const charDesc = acc2?.desc || 'woman in her late 20s with sensitive skin';
+      const planRes = await fetch('/api/claude', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-anthropic-key': getAnthropicKey() },
+        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: `Plan a 6-slide TikTok skincare story slideshow.
+
+Hook: "${hook}"
+App: ${appName} — AI skincare for sensitive/eczema/rosacea skin
+Character: ${charDesc}
+
+CRITICAL INSIGHT: TikTok data shows most viewers leave before slide 4. You must compress the payoff.
+The product/resolution must be visible by slide 3 — not slide 5 or 6.
+This is a personal story first. The product is revealed as the solution, not promoted.
+
+STORY STRUCTURE (6-slide arc — max 3 person shots, rest are product/app):
+- Slide 1: PERSON — selfie, raw pain visible, skin problem specific. Text = exact hook. type: selfie or mirror
+- Slide 2: PERSON — escalation, emotional low, failed attempts. 3-4 words MAX. type: selfie or lifestyle
+- Slide 3: PRODUCT — show the products that weren't working laid out or held up. No person needed. type: product
+- Slide 4: APP — the discovery. Show the Aureya app screen. type: app (MANDATORY)
+- Slide 5: PERSON — visible improvement, relief on face, same environment as slide 1 for contrast. type: selfie or lifestyle
+- Slide 6: PERSON — confident outdoor or different environment, emotional win, closes the hook loop. type: selfie or lifestyle
+
+FACE VARIETY RULE (critical for realism):
+- Only slides 1, 2, 5, 6 show the person — maximum 4 person shots
+- Slides 3 and 4 must NEVER show the person's face — product flat lay or app screen only
+- This variety is what makes the slideshow look like a real person's camera roll not AI
+
+APP MENTION GATING (hard rule):
+- Do NOT mention Aureya, any app, or any product by name before slide 4
+- Slides 1-3 must build tension WITHOUT revealing the solution
+- The app reveal on slide 4 must feel earned, not advertised
+
+PACING RULES (retention is everything — target >20% completion):
+- Slide 1 text = exact hook. No changes.
+- Slide 2 text = 3-4 words MAX, lowercase. Physical or emotional. No padding.
+- Slide 3 text = tease — creates urgency without revealing. "she said something i wasn't expecting"
+- Slide 4 text = realisation moment — short, visceral. "oh. it was my cleanser."
+- Slide 5 text = app shown, brief. "this changed how i look at my skin"
+- Slide 6 text = emotional close, lowercase, specific. Banned words: "amazing", "transformed", "results", "incredible", "still early", "worth a try", "might help"
+- NEVER repeat information — each slide adds something new
+
+SCENE RULES (critical):
+- ALL scenes must be INDOORS — bedroom, bathroom, kitchen, sofa, office, car only
+- NO golden hour, NO outdoor parks, NO coffee shops, NO cinematic lighting
+- Every scene must have harsh or unflattering real lighting — bathroom overhead, phone screen glow, window sidelight, dim lamp
+- Scenes must feel like a real person's home, not a photoshoot location
+- Slide 6 must be indoor — bathroom mirror, bedroom window, kitchen morning light
+
+SCENE TYPES: selfie, mirror, lifestyle, skin_close, app, product
+COMBINATION RULE: Slides 4-5 can use product then app back to back — show the products that weren't working (slide 4 product), then the app that figured it out (slide 5 app). This is a strong soft CTA sequence.
+SCENE VARIETY RULE (critical for realism):
+- No two consecutive slides should use the same scene type
+- Slides must vary between: close-up face, wide body shot, car selfie, mirror, outdoor, bedroom, bathroom
+- Slide 1: selfie from below or mirror — arm extended, hand visible, raw skin visible, pain on face
+- Slide 2: different angle — side profile selfie, or lying in bed selfie from above, or sitting on floor selfie low angle
+- Slide 3: another angle — outdoor selfie shading eyes, or car selfie with seatbelt, or mirror selfie
+- Slide 4: skin close-up selfie — phone held very close to face, raw skin texture visible OR mirror check showing improvement
+- Slide 5: app slide — phone laid flat on surface (table, bed), screen visible, no person needed
+- Slide 6: confident outdoor or car selfie — arm extended, person looks relaxed, different environment from slide 1
+- Every "scene" field MUST mention the selfie angle: "arm extended selfie from below", "car selfie seatbelt visible arm out", "mirror selfie phone in reflection", "lying in bed phone above face"
+- ALL shots must look like the person took the photo themselves — arm extended, phone visible, selfie angle
+- NEVER describe shots as if taken by a photographer or third party
+Each slide needs SHORT story text (3-8 words max) continuing the narrative.
+Slide 1 text must be EXACTLY: "${hook}"
+TEXT STYLE RULES (critical for authenticity):
+- Slides 2-6 text must feel like a real person typed it — lowercase preferred, imperfect, raw
+- Use specific sensory language: "my face was burning", "couldn't stop itching", "cried in the bathroom"
+- NEVER use polished marketing language: no "transformed", "journey", "incredible results"
+- Short fragments are better than complete sentences: "still burning tho" not "my skin was still burning"
+- Slide 6 closes the emotional loop from slide 1 — make it feel earned not advertised
+
+MANDATORY SLIDE TYPES (non-negotiable):
+- Slide 1: "selfie" or "mirror" — person in pain
+- Slide 2: "selfie" or "lifestyle" — person escalating
+- Slide 3: "product" — MUST be product type, no person
+- Slide 4: "app" — MUST be app type, no person. This is the CTA.
+- Slide 5: "selfie" or "lifestyle" — person showing improvement
+- Slide 6: "selfie" or "lifestyle" — person confident, outdoor if possible
+
+If you use a person-type (selfie/mirror/lifestyle) for slides 3 or 4, the output is INVALID.
+
+Return ONLY a JSON array of exactly 6 objects:
+[{"slide":1,"type":"selfie","scene":"arm extended selfie from below, bathroom background, harsh light","skin_state":"skin condition at this stage","text":"story text 3-8 words"},...]` }] })
+      });
+      const planData = await planRes.json();
+      bulkPlan = JSON.parse((planData.content?.[0]?.text || '[]').replace(/\`\`\`json|\`\`\`/g,'').trim());
+      // Enforce slide 3=product, slide 4=app
+      if (bulkPlan[2] && !['product'].includes(bulkPlan[2].type)) {
+        bulkPlan[2] = { ...bulkPlan[2], type: 'product', scene: 'skincare products laid out on bathroom counter, overhead shot, products that were not working' };
+      }
+      if (bulkPlan[3] && bulkPlan[3].type !== 'app') {
+        bulkPlan[3] = { ...bulkPlan[3], type: 'app', scene: 'iPhone showing Aureya skincare app screen, phone on table or held up' };
+      }
+    } catch(e) {
+      bulkLog('  Plan failed, using fallback scenes', 'err');
+    }
+
+    const acc = selectedAccountIndex !== null ? connectedAccounts[selectedAccountIndex] : null;
+    const hasLoRA = !!(acc?.loraPath);
+
+    const images = [];
+    for (let i = 0; i < 6; i++) {
+      const variant = styleVariants[i];
+      const isFirst = i === 0;
+      const beforeExtras = document.getElementById('before-extras').value.trim();
+      const styleDesc = isFirst ? variant.style + (beforeExtras ? ` Including: ${beforeExtras}.` : '') : variant.style;
+      const planEntry = bulkPlan[i] || null;
+      const appNameBulk = document.getElementById('app-name')?.value || 'Aureya';
+      const { prompt: slidePrompt } = buildSlidePrompt(planEntry, styleDesc, arch, hook, i, appNameBulk);
+      const rvBodyStr = buildRVBody(slidePrompt, null, hasLoRA, acc?.loraPath, acc?.loraTrigger, i);
+      const rvBody = JSON.parse(rvBodyStr);
+
+      try {
+        const falData = await callFal(rvBody.endpoint, rvBody.input, getFalKey());
+        if (!falData.images?.[0]?.url) throw new Error(JSON.stringify(falData.error || 'No image'));
+        // Pass 2: Crystal Upscaler for face enhancement
+        let currentUrl = falData.images[0].url;
+        try {
+          bulkLog(`  Slide ${i+1} Pass 2: Enhancing face...`);
+          const upscaled = await runCrystalUpscaler(currentUrl, getFalKey());
+          if (upscaled) currentUrl = upscaled;
+        } catch(e2) {
+          bulkLog(`  Slide ${i+1} Pass 2 skipped: ${e2.message}`);
+        }
+        // Apply text overlay same as single generator
+        const textOverlay = planEntry?.text || (i === 0 ? hook : '');
+        const finalUrl = textOverlay ? await compositeTextOnImage(currentUrl, textOverlay, i, variant.label) : currentUrl;
+        images.push({ url: finalUrl, label: variant.label, slideNum: i + 1, isFirst });
+        bulkLog(`  Slide ${i+1} ✓`, 'ok');
+      } catch(e) {
+        bulkLog(`  Slide ${i+1} failed: ${e.message}`, 'err');
+        images.push(null);
+      }
+    }
+    allSlideshows.push({ hook, images });
+  }
+
+  setBulkProgress(100, 'All slideshows generated! Downloading...');
+  bulkLog('Downloading all slideshows...', 'info');
+
+  // Download all images with slideshow and slide labels
+  for (let s = 0; s < allSlideshows.length; s++) {
+    const { hook, images } = allSlideshows[s];
+    const hookSlug = hook.slice(0, 30).replace(/[^a-z0-9]/gi, '-').toLowerCase();
+    for (let i = 0; i < images.length; i++) {
+      if (!images[i]) continue;
+      await new Promise(r => setTimeout(r, 300));
+      const a = document.createElement('a');
+      a.href = images[i].url;
+      a.download = `slideshow-${s+1}-${hookSlug}-slide-${i+1}.jpg`;
+      a.click();
+    }
+  }
+
+  showToast(`${count} slideshows generated and downloaded!`, 'success');
+  setBulkProgress(100, 'Complete!');
+  } catch(e) {
+    showToast('Bulk generation error: ' + e.message, 'error');
+    bulkLog('Fatal error: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    setBulkProgress(100, 'Done');
+  }
+}
+
+// ─── TEXT OVERLAY ON CANVAS ───────────────────────────────────────────────────
+async function getTextPlacement(text, slideIndex, slideLabel) {
+  // Ask Claude where to place text based on slide content
+  try {
+    const res = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-anthropic-key': getAnthropicKey() },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 100,
+        messages: [{ role: 'user', content: `You are placing text on a TikTok skincare slideshow photo. 
+
+Slide ${slideIndex + 1}: "${slideLabel}"
+Text to place: "${text}"
+
+Decide the best position for this text overlay. CRITICAL RULES:
+- y must be between 0.15 and 0.72 — TikTok UI covers the top 10% and bottom 22% of the screen
+- Hook text (slide 1): y=0.25 to 0.40, centered, large
+- Struggle/emotional slides: y=0.65 to 0.72, centered or left, small
+- App discovery slides: y=0.55 to 0.68, centered, medium
+- Progress slides: y=0.60 to 0.72, centered, small or medium
+- NEVER use y below 0.72 — that area is hidden by TikTok username and progress bar
+- NEVER use y above 0.15 — that area is hidden by device status bar
+
+Return ONLY a JSON object: {"x": 0.0-1.0, "y": 0.15-0.72, "align": "left"|"center"|"right", "size": "small"|"medium"|"large"}
+x=0.5 y=0.5 is center. x=0 is left edge, x=1 is right edge. y=0 is top, y=1 is bottom.` }]
+      })
+    });
+    const data = await res.json();
+    const txt = data.content?.[0]?.text || '{}';
+    return JSON.parse(txt.replace(/```json|```/g, '').trim());
+  } catch(e) {
+    // Fallback positions
+    const fallbacks = [
+      { x: 0.5, y: 0.30, align: 'center', size: 'large' },   // slide 1 hook — upper third
+      { x: 0.5, y: 0.68, align: 'center', size: 'small' },   // slide 2 struggle
+      { x: 0.5, y: 0.62, align: 'center', size: 'small' },   // slide 3 discovery
+      { x: 0.5, y: 0.65, align: 'center', size: 'medium' },  // slide 4 progress
+      { x: 0.5, y: 0.65, align: 'center', size: 'medium' },  // slide 5 progress
+      { x: 0.5, y: 0.68, align: 'center', size: 'medium' },  // slide 6 after
+    ];
+    return fallbacks[slideIndex] || { x: 0.5, y: 0.75, align: 'center', size: 'medium' };
+  }
+}
+
+// ─── APP UI OVERLAY ───────────────────────────────────────────────────────────
+async function compositeAppOverlay(imageUrl, appName) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+
+      const W = canvas.width;
+      const H = canvas.height;
+
+      // iPhone mockup — positioned in lower-right corner
+      const phoneW = W * 0.35;  // Phone width relative to slide
+      const phoneH = phoneW * 2.16;  // iPhone aspect ratio (9:16 * 1.2 for bezel)
+      const phoneX = W * 0.58;
+      const phoneY = H * 0.38;
+
+      // Phone bezels and frame
+      const bezelSize = phoneW * 0.04;
+      const screenRadius = phoneW * 0.08;
+
+      // Draw black phone frame
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(phoneX + screenRadius, phoneY);
+      ctx.lineTo(phoneX + phoneW - screenRadius, phoneY);
+      ctx.quadraticCurveTo(phoneX + phoneW, phoneY, phoneX + phoneW, phoneY + screenRadius);
+      ctx.lineTo(phoneX + phoneW, phoneY + phoneH - screenRadius);
+      ctx.quadraticCurveTo(phoneX + phoneW, phoneY + phoneH, phoneX + phoneW - screenRadius, phoneY + phoneH);
+      ctx.lineTo(phoneX + screenRadius, phoneY + phoneH);
+      ctx.quadraticCurveTo(phoneX, phoneY + phoneH, phoneX, phoneY + phoneH - screenRadius);
+      ctx.lineTo(phoneX, phoneY + screenRadius);
+      ctx.quadraticCurveTo(phoneX, phoneY, phoneX + screenRadius, phoneY);
+      ctx.closePath();
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fill();
+      ctx.restore();
+
+      // Notch
+      const notchW = phoneW * 0.4;
+      const notchH = phoneW * 0.08;
+      ctx.fillStyle = '#000000';
+      ctx.beginPath();
+      ctx.moveTo(phoneX + (phoneW - notchW) / 2 + notchH * 0.3, phoneY + bezelSize);
+      ctx.lineTo(phoneX + (phoneW + notchW) / 2 - notchH * 0.3, phoneY + bezelSize);
+      ctx.quadraticCurveTo(phoneX + (phoneW + notchW) / 2, phoneY + bezelSize, phoneX + (phoneW + notchW) / 2, phoneY + bezelSize + notchH * 0.6);
+      ctx.quadraticCurveTo(phoneX + (phoneW + notchW) / 2, phoneY + bezelSize + notchH, phoneX + (phoneW + notchW) / 2 - notchH * 0.3, phoneY + bezelSize + notchH);
+      ctx.lineTo(phoneX + (phoneW - notchW) / 2 + notchH * 0.3, phoneY + bezelSize + notchH);
+      ctx.quadraticCurveTo(phoneX + (phoneW - notchW) / 2, phoneY + bezelSize + notchH, phoneX + (phoneW - notchW) / 2, phoneY + bezelSize + notchH * 0.6);
+      ctx.quadraticCurveTo(phoneX + (phoneW - notchW) / 2, phoneY + bezelSize, phoneX + (phoneW - notchW) / 2 + notchH * 0.3, phoneY + bezelSize);
+      ctx.fill();
+
+      // Screen area
+      const screenX = phoneX + bezelSize;
+      const screenY = phoneY + bezelSize;
+      const screenW = phoneW - bezelSize * 2;
+      const screenH = phoneH - bezelSize * 2;
+
+      // App screen background gradient (Aureya teal-to-cream)
+      const gradient = ctx.createLinearGradient(screenX, screenY, screenX, screenY + screenH);
+      gradient.addColorStop(0, '#0d3a3a');
+      gradient.addColorStop(1, '#f5f0ea');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(screenX, screenY, screenW, screenH);
+
+      // Status bar (top)
+      ctx.fillStyle = '#0d3a3a';
+      ctx.fillRect(screenX, screenY, screenW, screenH * 0.08);
+      ctx.font = `${screenW * 0.06}px -apple-system, sans-serif`;
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'right';
+      ctx.fillText('9:41', screenX + screenW - screenW * 0.06, screenY + screenH * 0.055);
+
+      // App header
+      ctx.fillStyle = '#0d3a3a';
+      ctx.fillRect(screenX, screenY + screenH * 0.08, screenW, screenH * 0.12);
+      ctx.font = `bold ${screenW * 0.1}px -apple-system, sans-serif`;
+      ctx.fillStyle = '#c8ff5a';
+      ctx.textAlign = 'center';
+      ctx.fillText('aureya', screenX + screenW / 2, screenY + screenH * 0.17);
+
+      // Main content area - skincare routine cards
+      const cardStartY = screenY + screenH * 0.22;
+      const cardH = screenH * 0.18;
+      const cardGap = screenH * 0.02;
+
+      // Card 1: Morning Routine
+      ctx.fillStyle = 'rgba(200, 255, 90, 0.15)';
+      ctx.fillRect(screenX + screenW * 0.05, cardStartY, screenW * 0.9, cardH);
+      ctx.fillStyle = '#0d3a3a';
+      ctx.font = `bold ${screenW * 0.065}px -apple-system, sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.fillText('Morning Routine', screenX + screenW * 0.1, cardStartY + cardH * 0.3);
+      ctx.font = `${screenW * 0.045}px -apple-system, sans-serif`;
+      ctx.fillStyle = 'rgba(13, 58, 58, 0.7)';
+      ctx.fillText('Cleanser · Toner · SPF', screenX + screenW * 0.1, cardStartY + cardH * 0.6);
+
+      // Card 2: Night Routine
+      ctx.fillStyle = 'rgba(200, 255, 90, 0.15)';
+      ctx.fillRect(screenX + screenW * 0.05, cardStartY + cardH + cardGap, screenW * 0.9, cardH);
+      ctx.fillStyle = '#0d3a3a';
+      ctx.font = `bold ${screenW * 0.065}px -apple-system, sans-serif`;
+      ctx.fillText('Night Routine', screenX + screenW * 0.1, cardStartY + cardH + cardGap + cardH * 0.3);
+      ctx.font = `${screenW * 0.045}px -apple-system, sans-serif`;
+      ctx.fillStyle = 'rgba(13, 58, 58, 0.7)';
+      ctx.fillText('Oil cleanser · Serum · Moisturizer', screenX + screenW * 0.1, cardStartY + cardH + cardGap + cardH * 0.6);
+
+      // CTA Button
+      const btnY = cardStartY + (cardH + cardGap) * 2 + screenH * 0.03;
+      const btnW = screenW * 0.85;
+      const btnH = screenH * 0.08;
+      ctx.fillStyle = '#c8ff5a';
+      ctx.beginPath();
+      ctx.moveTo(screenX + (screenW - btnW) / 2 + btnH * 0.15, btnY);
+      ctx.lineTo(screenX + (screenW + btnW) / 2 - btnH * 0.15, btnY);
+      ctx.quadraticCurveTo(screenX + (screenW + btnW) / 2, btnY, screenX + (screenW + btnW) / 2, btnY + btnH * 0.3);
+      ctx.lineTo(screenX + (screenW + btnW) / 2, btnY + btnH - btnH * 0.3);
+      ctx.quadraticCurveTo(screenX + (screenW + btnW) / 2, btnY + btnH, screenX + (screenW + btnW) / 2 - btnH * 0.15, btnY + btnH);
+      ctx.lineTo(screenX + (screenW - btnW) / 2 + btnH * 0.15, btnY + btnH);
+      ctx.quadraticCurveTo(screenX + (screenW - btnW) / 2, btnY + btnH, screenX + (screenW - btnW) / 2, btnY + btnH - btnH * 0.3);
+      ctx.lineTo(screenX + (screenW - btnW) / 2, btnY + btnH * 0.3);
+      ctx.quadraticCurveTo(screenX + (screenW - btnW) / 2, btnY, screenX + (screenW - btnW) / 2 + btnH * 0.15, btnY);
+      ctx.fill();
+      ctx.fillStyle = '#0d3a3a';
+      ctx.font = `bold ${screenW * 0.06}px -apple-system, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('Get Personalized Plan', screenX + screenW / 2, btnY + btnH * 0.58);
+
+      // Home indicator (bottom)
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.fillRect(screenX + screenW * 0.35, screenY + screenH - screenW * 0.06, screenW * 0.3, screenW * 0.025);
+
+      // Phone shadow for depth
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+      ctx.beginPath();
+      ctx.ellipse(phoneX + phoneW / 2, phoneY + phoneH + phoneW * 0.05, phoneW * 0.45, phoneW * 0.08, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      resolve(canvas.toDataURL('image/jpeg', 0.88));
+    };
+    img.onerror = () => resolve(imageUrl);
+    img.src = imageUrl;
+  });
+}
+
+async function compositeTextOnImage(imageUrl, text, slideIndex, slideLabel) {
+  if (!text || !text.trim()) return imageUrl;
+
+  const placement = await getTextPlacement(text, slideIndex, slideLabel || '');
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      // Force 9:16 canvas — pad or crop to portrait if image is wrong ratio
+      const targetRatio = 9 / 16;
+      const imgRatio = img.width / img.height;
+      let canvasW, canvasH, drawX, drawY, drawW, drawH;
+
+      if (Math.abs(imgRatio - targetRatio) < 0.05) {
+        // Already close to 9:16 — use as-is
+        canvasW = img.width; canvasH = img.height;
+        drawX = 0; drawY = 0; drawW = img.width; drawH = img.height;
+      } else if (imgRatio > targetRatio) {
+        // Wider than 9:16 — crop sides
+        canvasH = img.height; canvasW = Math.round(img.height * targetRatio);
+        drawX = -Math.round((img.width - canvasW) / 2); drawY = 0;
+        drawW = img.width; drawH = img.height;
+      } else {
+        // Taller than 9:16 — pad sides with black
+        canvasW = img.width; canvasH = Math.round(img.width / targetRatio);
+        drawX = 0; drawY = Math.round((canvasH - img.height) / 2);
+        drawW = img.width; drawH = img.height;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = canvasW;
+      canvas.height = canvasH;
+      const ctx = canvas.getContext('2d');
+
+      // Black background for padding
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvasW, canvasH);
+      ctx.drawImage(img, drawX, drawY, drawW, drawH);
+
+      // Semi-transparent gradient behind text for readability
+      const gradH = canvasH * 0.35;
+      const gradY = placement.y < 0.5 ? 0 : canvasH - gradH;
+      const grad = ctx.createLinearGradient(0, gradY, 0, gradY + gradH);
+      grad.addColorStop(0, placement.y < 0.5 ? 'rgba(0,0,0,0.65)' : 'rgba(0,0,0,0)');
+      grad.addColorStop(1, placement.y < 0.5 ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,0.65)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, gradY, canvasW, gradH);
+
+      // Auto-shrink font until text fits within safe zone (88% width, max 40% height)
+      const safeW = canvasW * 0.88;
+      const safeMaxH = canvasH * 0.40;
+      const sizeMap = { small: 0.052, medium: 0.062, large: 0.075 };
+      let sizeFactor = sizeMap[placement.size] || 0.062;
+      let fontSize, lines, lineHeight, totalHeight;
+
+      // Iteratively shrink font until all lines fit
+      for (let attempt = 0; attempt < 8; attempt++) {
+        fontSize = Math.round(canvasW * sizeFactor);
+        ctx.font = `700 ${fontSize}px -apple-system, "Helvetica Neue", Arial, sans-serif`;
+        
+        // Word wrap
+        const words = text.split(' ');
+        lines = [];
+        let line = '';
+        for (const word of words) {
+          const test = line ? line + ' ' + word : word;
+          if (ctx.measureText(test).width > safeW && line) {
+            lines.push(line);
+            line = word;
+          } else {
+            line = test;
+          }
+        }
+        if (line) lines.push(line);
+
+        lineHeight = fontSize * 1.3;
+        totalHeight = lines.length * lineHeight;
+
+        // Check all lines fit in width and total height fits
+        const maxLineW = Math.max(...lines.map(l => ctx.measureText(l).width));
+        if (maxLineW <= safeW && totalHeight <= safeMaxH) break;
+        sizeFactor *= 0.85; // shrink 15% each attempt
+      }
+
+      ctx.textAlign = placement.align || 'center';
+      ctx.fillStyle = 'white';
+      ctx.shadowColor = 'rgba(0,0,0,0.95)';
+      ctx.shadowBlur = 18;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 2;
+
+      const xAnchor = canvasW * placement.x;
+
+      // TikTok UI covers bottom ~18% of screen — clamp text into safe zone
+      // Top safe: 8% from top (avoids clock/status bar area in slideshow view)
+      // Bottom safe: 78% from top (avoids TikTok progress bar, username, caption)
+      const safeTopY = canvasH * 0.08 + fontSize;
+      const safeBottomY = canvasH * 0.78;
+
+      // Place text centered on placement.y, then clamp so it never goes out of bounds
+      let startY = canvasH * placement.y - totalHeight / 2 + fontSize;
+      // Clamp top
+      if (startY < safeTopY) startY = safeTopY;
+      // Clamp bottom — ensure last line fits before TikTok UI
+      const lastLineY = startY + (lines.length - 1) * lineHeight;
+      if (lastLineY > safeBottomY) startY = safeBottomY - (lines.length - 1) * lineHeight;
+      // Final top clamp after bottom adjustment
+      if (startY < safeTopY) startY = safeTopY;
+
+      lines.forEach((l, li) => {
+        ctx.fillText(l, xAnchor, startY + li * lineHeight);
+      });
+
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => resolve(imageUrl);
+    img.src = imageUrl;
+  });
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  const icons = { success: '✓', error: '✕', '': 'ℹ' };
+  t.innerHTML = `<span style="color:${type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--error)' : 'var(--accent)'}">${icons[type] || 'ℹ'}</span> ${msg}`;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+loadSavedKeys();
+renderPerfTable();
+renderAccounts();
+renderAccountSelector();
+handleTikTokCallback();
+
+function handleTikTokCallback() {
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get('tiktok_connected')) {
+    const token = params.get('tiktok_token');
+    const openId = params.get('tiktok_open_id');
+    const refreshToken = params.get('tiktok_refresh_token');
+    const expiresAt = params.get('tiktok_expires_at');
+    const scope = params.get('tiktok_scope');
+    
+    // Get pending label from localStorage
+    const label = localStorage.getItem('pending_account_label') || 'TikTok Account ' + (connectedAccounts.length + 1);
+    const desc = localStorage.getItem('pending_account_desc') || '';
+    const skinType = localStorage.getItem('pending_account_skin') || 'sensitive';
+    const characterUrl = localStorage.getItem('pending_account_char') || '';
+    const existingIdx = localStorage.getItem('pending_connect_existing');
+    
+    localStorage.removeItem('pending_account_label');
+    localStorage.removeItem('pending_account_desc');
+    localStorage.removeItem('pending_account_skin');
+    localStorage.removeItem('pending_account_char');
+    localStorage.removeItem('pending_connect_existing');
+
+    if (existingIdx !== null) {
+      // Connecting TikTok to existing account
+      const idx = parseInt(existingIdx);
+      if (connectedAccounts[idx]) {
+        connectedAccounts[idx].token = token;
+        connectedAccounts[idx].openId = openId;
+        connectedAccounts[idx].refreshToken = refreshToken || null;
+        connectedAccounts[idx].expiresAt = expiresAt ? Number(expiresAt) : null;
+        connectedAccounts[idx].scope = scope || null;
+        showToast('TikTok connected to ' + connectedAccounts[idx].label, 'success');
+      }
+    } else {
+      // Check if already connected by openId
+      const existing = connectedAccounts.findIndex(a => a.openId === openId);
+      if (existing >= 0) {
+        connectedAccounts[existing] = {
+          label, desc, skinType, characterUrl, token, openId,
+          refreshToken: refreshToken || null,
+          expiresAt: expiresAt ? Number(expiresAt) : null,
+          scope: scope || null
+        };
+        showToast('Account updated: ' + label, 'success');
+      } else {
+        connectedAccounts.push({
+          label, desc, skinType, characterUrl, token, openId,
+          refreshToken: refreshToken || null,
+          expiresAt: expiresAt ? Number(expiresAt) : null,
+          scope: scope || null
+        });
+        showToast('Account connected: ' + label, 'success');
+      }
+    }
+    saveAccounts();
+    renderAccounts();
+    updateTikTokBtn(true);
+    window.history.replaceState({}, '', '/');
+    nav('accounts');
+  } else if (params.get('tiktok_error')) {
+    showToast('TikTok error: ' + params.get('tiktok_error'), 'error');
+    window.history.replaceState({}, '', '/');
+  } else if (connectedAccounts.length > 0) {
+    updateTikTokBtn(true);
+  }
+}
+
+function updateTikTokBtn(connected) {
+  const btn = document.getElementById('tiktok-connect-btn');
+  if (connected) {
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.01-.07z"/></svg> ${connectedAccounts.length} account${connectedAccounts.length !== 1 ? 's' : ''} connected`;
+    btn.style.color = '#4ade80';
+    btn.style.borderColor = 'rgba(74,222,128,0.3)';
+    btn.onclick = (e) => {
+      e.preventDefault();
+      // Bug 4 fix: actually clear tokens from connectedAccounts too, not just stale localStorage keys
+      connectedAccounts.forEach(acc => {
+        acc.token = null;
+        acc.openId = null;
+        acc.refreshToken = null;
+        acc.expiresAt = null;
+      });
+      saveAccounts();
+      renderAccounts();
+      renderAccountSelector();
+      localStorage.removeItem('tiktok_token');
+      localStorage.removeItem('tiktok_open_id');
+      updateTikTokBtn(false);
+      showToast('TikTok disconnected — reconnect from the Accounts tab', '');
+    };
+  } else {
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.01-.07z"/></svg> Connect TikTok`;
+    btn.style.color = '#6b6b6b';
+    btn.style.borderColor = 'rgba(255,255,255,0.08)';
+    btn.onclick = null;
+    btn.href = '/api/tiktok-auth';
+  }
+}
+
+// ============== VIDEO GENERATION ==============
+
+let currentVideoUrl = null;
+let selectedVideoAccountIndex = null;
+
+const videoLog = (msg, type = 'info') => {
+  const el = document.getElementById('video-log');
+  if (!el) return;
+  const div = document.createElement('div');
+  const colors = { info: '#9aa', ok: '#c8ff5a', err: '#ff6b6b', warn: '#ffb84d' };
+  div.style.color = colors[type] || colors.info;
+  div.textContent = `> ${msg}`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+};
+
+const getElevenKey = () => {
+  const stored = localStorage.getItem('larry-eleven-key') || '';
+  const input = document.getElementById('video-eleven-key')?.value || '';
+  return input || stored;
+};
+
+// Persist eleven key on input
+document.addEventListener('DOMContentLoaded', () => {
+  const stored = localStorage.getItem('larry-eleven-key');
+  if (stored) {
+    const input = document.getElementById('video-eleven-key');
+    if (input) input.value = stored;
+  }
+  const elevenInput = document.getElementById('video-eleven-key');
+  if (elevenInput) {
+    elevenInput.addEventListener('change', (e) => {
+      localStorage.setItem('larry-eleven-key', e.target.value);
+    });
+  }
+});
+
+async function previewVoice() {
+  const text = document.getElementById('video-hook').value.trim();
+  if (!text) { showToast('Enter a hook first', 'error'); return; }
+  const voiceId = document.getElementById('video-voice').value;
+  const elevenKey = getElevenKey();
+  if (!elevenKey) { showToast('Add ElevenLabs API key', 'error'); return; }
+
+  const btn = document.getElementById('preview-voice-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generating...';
+  videoLog('Generating voice preview...', 'info');
+
+  try {
+    const res = await fetch('/api/elevenlabs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-eleven-key': elevenKey },
+      body: JSON.stringify({ voice_id: voiceId, text })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      throw new Error(data.error?.detail?.message || data.error?.message || JSON.stringify(data.error || data));
+    }
+    if (!data.audio_base64) throw new Error('No audio returned');
+
+    const audio = document.getElementById('voice-preview-audio');
+    audio.src = `data:${data.content_type || 'audio/mpeg'};base64,${data.audio_base64}`;
+    audio.style.display = 'block';
+    audio.play();
+    videoLog('Voice preview ready ✓', 'ok');
+  } catch (e) {
+    videoLog('Voice preview failed: ' + e.message, 'err');
+    showToast('Voice preview failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '▶ Preview voice';
+  }
+}
+
+function renderVideoAccountSelector() {
+  const container = document.getElementById('video-account-selector');
+  if (!container) return;
+  if (!connectedAccounts || connectedAccounts.length === 0) {
+    container.innerHTML = '<div style="font-size:13px;color:var(--muted);">No accounts yet — add one in the Accounts tab.</div>';
+    return;
+  }
+  container.innerHTML = connectedAccounts.map((acc, i) => `
+    <button class="btn ${selectedVideoAccountIndex === i ? 'btn-primary' : ''}"
+            onclick="selectVideoAccount(${i})"
+            style="font-size:13px;">
+      ${acc.label || 'Account ' + (i+1)}
+    </button>
+  `).join('');
+}
+
+function selectVideoAccount(i) {
+  selectedVideoAccountIndex = i;
+  renderVideoAccountSelector();
+}
+
+async function generateTalkingVideo() {
+  const text = document.getElementById('video-hook').value.trim();
+  if (!text) { showToast('Enter a hook', 'error'); return; }
+  if (selectedVideoAccountIndex === null) { showToast('Select an account first', 'error'); return; }
+
+  const acc = connectedAccounts[selectedVideoAccountIndex];
+  const voiceId = document.getElementById('video-voice').value;
+  const elevenKey = getElevenKey();
+  const falKey = getFalKey();
+
+  if (!elevenKey) { showToast('ElevenLabs API key required', 'error'); return; }
+  if (!falKey) { showToast('FAL API key required (Setup tab)', 'error'); return; }
+
+  const btn = document.getElementById('gen-video-btn');
+  btn.disabled = true;
+  btn.textContent = '🎬 Generating...';
+  document.getElementById('video-output-card').style.display = 'none';
+
+  try {
+    // ===== STEP 1: Get/generate character image URL =====
+    videoLog('Step 1/4: Preparing character image...', 'info');
+    let characterImageUrl;
+
+    if (acc.baseImageUrl && acc.baseImageUrl.startsWith('http')) {
+      videoLog('Using uploaded base image', 'info');
+      characterImageUrl = acc.baseImageUrl;
+    } else {
+      // Generate a character via FAL (uses your fal.js contract: endpoint + input)
+      videoLog('Generating character image with FLUX + LoRA...', 'info');
+      const charPrompt = `aureyaskin2, casual selfie portrait of a woman, looking directly at camera, natural lighting, real skin texture visible, no makeup, authentic UGC selfie aesthetic, portrait orientation 9:16`;
+
+      const charRes = await fetch('/api/fal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-fal-key': falKey },
+        body: JSON.stringify({
+          endpoint: 'fal-ai/flux-general',
+          input: {
+            prompt: charPrompt,
+            negative_prompt: 'cinematic, professional photography, studio lighting, oversaturated, plastic skin',
+            image_size: 'portrait_16_9',
+            num_inference_steps: 28,
+            guidance_scale: 3.5,
+            loras: acc.loraPath ? [{ path: acc.loraPath, scale: 0.85 }] : []
+          }
+        })
+      });
+      const charData = await charRes.json();
+      if (!charRes.ok || charData.error) {
+        throw new Error('Character gen: ' + (charData.error || JSON.stringify(charData)));
+      }
+      if (!charData.images?.[0]?.url) throw new Error('Character gen returned no image');
+      characterImageUrl = charData.images[0].url;
+      videoLog('Character image ready ✓', 'ok');
+    }
+
+    // ===== STEP 2: Generate voice with ElevenLabs =====
+    videoLog('Step 2/4: Generating voice with ElevenLabs...', 'info');
+    const voiceRes = await fetch('/api/elevenlabs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-eleven-key': elevenKey },
+      body: JSON.stringify({ voice_id: voiceId, text })
+    });
+    const voiceData = await voiceRes.json();
+    if (!voiceRes.ok || voiceData.error) {
+      throw new Error('ElevenLabs: ' + (voiceData.error?.detail?.message || voiceData.error?.message || JSON.stringify(voiceData.error || voiceData)));
+    }
+    if (!voiceData.audio_base64) throw new Error('ElevenLabs returned no audio');
+    videoLog('Voice generated ✓', 'ok');
+
+    // ===== STEP 3: Upload audio to Vercel Blob (so FAL can fetch it) =====
+    videoLog('Step 3/4: Uploading audio for lip-sync...', 'info');
+    const audioDataUrl = `data:${voiceData.content_type || 'audio/mpeg'};base64,${voiceData.audio_base64}`;
+    const audioUploadRes = await fetch('/api/upload-slides', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ images: [audioDataUrl] })
+    });
+    const audioUploadData = await audioUploadRes.json();
+    if (!audioUploadRes.ok || audioUploadData.error) {
+      throw new Error('Audio upload: ' + (audioUploadData.error || 'unknown'));
+    }
+    const audioUrl = audioUploadData.urls?.[0];
+    if (!audioUrl) throw new Error('No audio URL returned');
+    videoLog('Audio uploaded: ' + audioUrl.slice(0, 50) + '...', 'ok');
+
+    // ===== STEP 4: FAL sync-lipsync (async mode — long job) =====
+    videoLog('Step 4/4: Submitting lip-sync job...', 'info');
+    const submitRes = await fetch('/api/fal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-fal-key': falKey },
+      body: JSON.stringify({
+        action: 'submit',
+        endpoint: 'fal-ai/sync-lipsync',
+        input: {
+          video_url: characterImageUrl,
+          audio_url: audioUrl,
+          model: 'lipsync-1.9.0-beta',
+          sync_mode: 'cut_off'
+        }
+      })
+    });
+    const submitData = await submitRes.json();
+    if (!submitRes.ok || !submitData.request_id) {
+      throw new Error('Lip-sync submit: ' + (submitData.error || JSON.stringify(submitData)));
+    }
+    const reqId = submitData.request_id;
+    videoLog(`Lip-sync queued: ${reqId.slice(0, 8)}... (this takes 60-90s)`, 'info');
+
+    // Poll client-side — every 5s, up to 4 min total
+    let videoResult = null;
+    for (let i = 0; i < 48; i++) {
+      await new Promise(r => setTimeout(r, 5000));
+
+      const pollRes = await fetch('/api/fal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-fal-key': falKey },
+        body: JSON.stringify({
+          action: 'result',
+          endpoint: 'fal-ai/sync-lipsync',
+          request_id: reqId
+        })
+      });
+      const pollData = await pollRes.json();
+
+      // Done
+      if (pollData.video?.url) {
+        videoResult = pollData;
+        break;
+      }
+      // Failed
+      if (pollData.status === 'FAILED' || pollData.error) {
+        throw new Error('Lip-sync failed: ' + (pollData.error || JSON.stringify(pollData)));
+      }
+      // Still going
+      if (i % 3 === 0) videoLog(`Still syncing... ${(i+1)*5}s elapsed`, 'info');
+    }
+
+    if (!videoResult?.video?.url) {
+      throw new Error('Lip-sync timed out after 4 min');
+    }
+
+    currentVideoUrl = videoResult.video.url;
+    videoLog('Video ready ✓✓✓', 'ok');
+    videoLog('URL: ' + currentVideoUrl.slice(0, 60) + '...', 'info');
+
+    // Show output
+    const videoEl = document.getElementById('video-output');
+    videoEl.src = currentVideoUrl;
+    document.getElementById('video-output-card').style.display = 'block';
+    showToast('Video generated!', 'success');
+
+  } catch (e) {
+    videoLog('FAILED: ' + e.message, 'err');
+    showToast('Video generation failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🎬 Generate talking video';
+  }
+}
+
+async function downloadVideo() {
+  if (!currentVideoUrl) return;
+  try {
+    const res = await fetch(currentVideoUrl);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `larry_video_${Date.now()}.mp4`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    showToast('Download failed: ' + e.message, 'error');
+  }
+}
+
+async function postVideoToTikTok() {
+  if (!currentVideoUrl) { showToast('No video to post', 'error'); return; }
+  if (selectedVideoAccountIndex === null) { showToast('Select an account', 'error'); return; }
+  const acc = connectedAccounts[selectedVideoAccountIndex];
+  if (!acc?.token) { showToast('Account not connected to TikTok', 'error'); return; }
+
+  const caption = document.getElementById('video-hook').value.trim();
+  const btn = document.getElementById('post-video-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Posting...';
+
+  try {
+    videoLog('Posting video to TikTok...', 'info');
+    const res = await fetch('https://open.tiktokapis.com/v2/post/publish/video/init/', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${acc.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        post_info: {
+          title: caption.slice(0, 150),
+          privacy_level: 'SELF_ONLY',
+          disable_duet: false,
+          disable_comment: false,
+          disable_stitch: false
+        },
+        source_info: {
+          source: 'PULL_FROM_URL',
+          video_url: currentVideoUrl
+        }
+      })
+    });
+    const data = await res.json();
+    if (data.error?.code && data.error.code !== 'ok') {
+      throw new Error(data.error.message || data.error.code);
+    }
+    videoLog('Video posted to TikTok ✓', 'ok');
+    showToast('Video posted!', 'success');
+  } catch (e) {
+    videoLog('Post failed: ' + e.message, 'err');
+    showToast('Post failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '↑ Post to TikTok';
+  }
+}
+
+// Hook into nav so account selector renders when video tab opens
+const _origNav = window.nav;
+window.nav = function(name) {
+  if (_origNav) _origNav(name);
+  if (name === 'video') {
+    setTimeout(renderVideoAccountSelector, 50);
+  }
+};
+</script>
+</body>
+</html>
