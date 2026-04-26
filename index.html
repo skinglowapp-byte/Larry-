@@ -533,6 +533,7 @@
     <button class="nav-item active" onclick="nav('setup')"><span class="icon">⚙</span> Setup</button>
     <button class="nav-item" onclick="nav('hooks')"><span class="icon">🎣</span> Hook Generator</button>
     <button class="nav-item" onclick="nav('generate')"><span class="icon">✦</span> Generate Slideshow</button>
+    <button class="nav-item" onclick="nav('video')"><span class="icon">🎬</span> Generate Video</button>
     <button class="nav-item" onclick="nav('accounts')"><span class="icon">👤</span> Accounts</button>
     <button class="nav-item" onclick="nav('performance')"><span class="icon">📈</span> Performance Log</button>
     <button class="nav-item" onclick="nav('schedule')"><span class="icon">🕐</span> Scheduler</button>
@@ -765,6 +766,68 @@
       </div>
     </div>
 
+    <!-- VIDEO GENERATOR PANE -->
+    <div class="pane" id="pane-video">
+      <div class="pane-header">
+        <div class="pane-title">Generate talking video</div>
+        <div class="pane-sub">5-10s lip-sync UGC video — character reads your hook out loud</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">1. Hook (what the character says)</div>
+        <textarea id="video-hook" rows="3" placeholder="I spent 6 months avoiding mirrors because of my rosacea until a random girl at Sephora told me about this" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-2);color:var(--text);font-family:inherit;font-size:14px;resize:vertical;"></textarea>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px;">Tip: Keep it under 25 words for a 5-10s video. The character will speak this aloud.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">2. Voice settings</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div>
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">ElevenLabs voice</label>
+            <select id="video-voice" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-2);color:var(--text);">
+              <option value="EXAVITQu4vr4xnSDxMaL">Bella — young female (default)</option>
+              <option value="21m00Tcm4TlvDq8ikWAM">Rachel — calm female</option>
+              <option value="AZnzlk1XvdvUeBnXmlld">Domi — confident female</option>
+              <option value="pFZP5JQG7iQjIQuC4Bku">Lily — soft female</option>
+              <option value="XrExE9yKIg1WjnnlVkGX">Matilda — warm female</option>
+              <option value="jsCqWAovK2LkecY7zXl4">Freya — natural female</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">ElevenLabs API key</label>
+            <input type="password" id="video-eleven-key" placeholder="sk_..." style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-2);color:var(--text);" />
+          </div>
+        </div>
+        <button class="btn" onclick="previewVoice()" id="preview-voice-btn" style="font-size:13px;">▶ Preview voice</button>
+        <audio id="voice-preview-audio" controls style="display:none;width:100%;margin-top:10px;"></audio>
+      </div>
+
+      <div class="card">
+        <div class="card-title">3. Character</div>
+        <div id="video-account-selector" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"></div>
+        <div style="font-size:12px;color:var(--muted);">Select an account — the character image will be used for lip-sync.</div>
+      </div>
+
+      <div class="card">
+        <button class="btn btn-primary" onclick="generateTalkingVideo()" id="gen-video-btn" style="width:100%;font-size:15px;padding:14px;">🎬 Generate talking video</button>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center;">~60-90 seconds · uses ElevenLabs + FAL sync-lipsync</div>
+      </div>
+
+      <div class="card" id="video-output-card" style="display:none;">
+        <div class="card-title">Output</div>
+        <video id="video-output" controls playsinline style="width:100%;max-width:360px;border-radius:12px;background:#000;display:block;margin:0 auto;"></video>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button class="btn" onclick="downloadVideo()" style="flex:1;">↓ Download MP4</button>
+          <button class="btn btn-primary" onclick="postVideoToTikTok()" id="post-video-btn" style="flex:1;">↑ Post to TikTok</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Console</div>
+        <div id="video-log" class="console" style="max-height:240px;overflow:auto;font-family:monospace;font-size:12px;background:#0a0a0a;padding:12px;border-radius:8px;color:#9aa;"></div>
+      </div>
+    </div>
+
     <!-- ACCOUNTS PANE -->
     <div class="pane" id="pane-accounts">
       <div class="pane-header">
@@ -807,20 +870,8 @@
           <button onclick="generateCharacter()" id="gen-char-btn" class="btn btn-primary" style="flex:1;">✦ Generate character</button>
         </div>
 
-        <div style="display:flex;align-items:center;gap:10px;margin-top:12px;">
-          <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
-          <span style="font-size:11px;color:var(--muted);white-space:nowrap;">or upload your own</span>
-          <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
-        </div>
-
-        <label for="char-upload-input" id="char-upload-label" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;padding:10px 14px;border:1.5px dashed rgba(200,255,90,0.3);border-radius:var(--border-radius-md);cursor:pointer;font-size:13px;color:rgba(245,242,236,0.65);transition:border-color 0.2s,color 0.2s;" onmouseover="this.style.borderColor='rgba(200,255,90,0.6)';this.style.color='var(--accent)';" onmouseout="this.style.borderColor='rgba(200,255,90,0.3)';this.style.color='rgba(245,242,236,0.65)';">
-          <span style="font-size:16px;">↑</span> Upload base character photo
-        </label>
-        <input type="file" id="char-upload-input" accept="image/*" style="display:none;" onchange="handleCharacterUpload(event)" />
-        <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:5px;">JPG/PNG · face clearly visible · will be used as-is for IP-Adapter</div>
-
         <div id="char-preview" style="display:none;margin-top:14px;">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-family:DM Mono,monospace;" id="char-preview-label">GENERATED CHARACTER — will be used for all slides</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-family:DM Mono,monospace;">GENERATED CHARACTER — will be used for all slides</div>
           <img id="char-preview-img" style="width:120px;height:160px;object-fit:cover;border-radius:var(--border-radius-md);border:2px solid var(--accent);" />
           <div style="font-size:12px;color:var(--accent);margin-top:6px;">✓ Character locked — save account to use this face</div>
           <button onclick="saveCharacterToAccount()" class="btn btn-primary" style="width:100%;margin-top:10px;">Save account with this character</button>
@@ -2457,33 +2508,6 @@ let pendingCharacterDesc = '';
 let slidePlan = [];
 let selectedAccountIndex = null;
 
-function handleCharacterUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  if (!file.type.startsWith('image/')) { showToast('Please upload an image file', 'error'); return; }
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    pendingCharacterUrl = e.target.result; // base64 data URL
-    pendingCharacterDesc = 'User-uploaded base character';
-
-    const label = document.getElementById('char-upload-label');
-    label.innerHTML = `<span style="font-size:16px;">✓</span> ${file.name}`;
-    label.style.borderColor = 'rgba(200,255,90,0.6)';
-    label.style.color = 'var(--accent)';
-
-    const previewLabel = document.getElementById('char-preview-label');
-    if (previewLabel) previewLabel.textContent = 'UPLOADED CHARACTER — will be used for all slides';
-
-    document.getElementById('char-preview-img').src = pendingCharacterUrl;
-    document.getElementById('char-preview').style.display = 'block';
-
-    showToast('Character uploaded — save account to use this face', 'success');
-  };
-  reader.onerror = () => showToast('Failed to read image', 'error');
-  reader.readAsDataURL(file);
-}
-
 async function generateCharacter() {
   const skinType = document.getElementById('character-skin').value;
   const vibe = document.getElementById('character-vibe').value;
@@ -3114,248 +3138,132 @@ async function compositeAppOverlay(imageUrl, appName) {
       const W = canvas.width;
       const H = canvas.height;
 
-      // ── Phone mockup in lower-right corner ──────────────────────────
-      const phoneW  = W * 0.42;
-      const phoneH  = phoneW * 2.1;           // ~iPhone aspect ratio
-      const phoneX  = W * 0.54;
-      const phoneY  = H * 0.46;
-      const pR      = phoneW * 0.09;          // outer corner radius
+      // iPhone mockup — positioned in lower-right corner
+      const phoneW = W * 0.35;  // Phone width relative to slide
+      const phoneH = phoneW * 2.16;  // iPhone aspect ratio (9:16 * 1.2 for bezel)
+      const phoneX = W * 0.58;
+      const phoneY = H * 0.38;
 
-      // Drop shadow
+      // Phone bezels and frame
+      const bezelSize = phoneW * 0.04;
+      const screenRadius = phoneW * 0.08;
+
+      // Draw black phone frame
       ctx.save();
-      ctx.shadowColor = 'rgba(0,0,0,0.55)';
-      ctx.shadowBlur  = phoneW * 0.18;
-      ctx.shadowOffsetX = phoneW * 0.03;
-      ctx.shadowOffsetY = phoneW * 0.06;
-
-      // Phone body
       ctx.beginPath();
-      ctx.moveTo(phoneX + pR, phoneY);
-      ctx.lineTo(phoneX + phoneW - pR, phoneY);
-      ctx.quadraticCurveTo(phoneX + phoneW, phoneY, phoneX + phoneW, phoneY + pR);
-      ctx.lineTo(phoneX + phoneW, phoneY + phoneH - pR);
-      ctx.quadraticCurveTo(phoneX + phoneW, phoneY + phoneH, phoneX + phoneW - pR, phoneY + phoneH);
-      ctx.lineTo(phoneX + pR, phoneY + phoneH);
-      ctx.quadraticCurveTo(phoneX, phoneY + phoneH, phoneX, phoneY + phoneH - pR);
-      ctx.lineTo(phoneX, phoneY + pR);
-      ctx.quadraticCurveTo(phoneX, phoneY, phoneX + pR, phoneY);
+      ctx.moveTo(phoneX + screenRadius, phoneY);
+      ctx.lineTo(phoneX + phoneW - screenRadius, phoneY);
+      ctx.quadraticCurveTo(phoneX + phoneW, phoneY, phoneX + phoneW, phoneY + screenRadius);
+      ctx.lineTo(phoneX + phoneW, phoneY + phoneH - screenRadius);
+      ctx.quadraticCurveTo(phoneX + phoneW, phoneY + phoneH, phoneX + phoneW - screenRadius, phoneY + phoneH);
+      ctx.lineTo(phoneX + screenRadius, phoneY + phoneH);
+      ctx.quadraticCurveTo(phoneX, phoneY + phoneH, phoneX, phoneY + phoneH - screenRadius);
+      ctx.lineTo(phoneX, phoneY + screenRadius);
+      ctx.quadraticCurveTo(phoneX, phoneY, phoneX + screenRadius, phoneY);
       ctx.closePath();
-      ctx.fillStyle = '#111111';
+      ctx.fillStyle = '#1a1a1a';
       ctx.fill();
       ctx.restore();
 
-      // Phone border / bezel
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(phoneX + pR, phoneY);
-      ctx.lineTo(phoneX + phoneW - pR, phoneY);
-      ctx.quadraticCurveTo(phoneX + phoneW, phoneY, phoneX + phoneW, phoneY + pR);
-      ctx.lineTo(phoneX + phoneW, phoneY + phoneH - pR);
-      ctx.quadraticCurveTo(phoneX + phoneW, phoneY + phoneH, phoneX + phoneW - pR, phoneY + phoneH);
-      ctx.lineTo(phoneX + pR, phoneY + phoneH);
-      ctx.quadraticCurveTo(phoneX, phoneY + phoneH, phoneX, phoneY + phoneH - pR);
-      ctx.lineTo(phoneX, phoneY + pR);
-      ctx.quadraticCurveTo(phoneX, phoneY, phoneX + pR, phoneY);
-      ctx.closePath();
-      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-      ctx.lineWidth = phoneW * 0.025;
-      ctx.stroke();
-      ctx.restore();
-
-      // Screen inset
-      const sInset = phoneW * 0.05;
-      const sTopInset = phoneH * 0.055;
-      const sBotInset = phoneH * 0.055;
-      const sX = phoneX + sInset;
-      const sY = phoneY + sTopInset;
-      const sW = phoneW - sInset * 2;
-      const sH = phoneH - sTopInset - sBotInset;
-      const sR = pR * 0.6;
-
-      // Screen clip
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(sX + sR, sY);
-      ctx.lineTo(sX + sW - sR, sY);
-      ctx.quadraticCurveTo(sX + sW, sY, sX + sW, sY + sR);
-      ctx.lineTo(sX + sW, sY + sH - sR);
-      ctx.quadraticCurveTo(sX + sW, sY + sH, sX + sW - sR, sY + sH);
-      ctx.lineTo(sX + sR, sY + sH);
-      ctx.quadraticCurveTo(sX, sY + sH, sX, sY + sH - sR);
-      ctx.lineTo(sX, sY + sR);
-      ctx.quadraticCurveTo(sX, sY, sX + sR, sY);
-      ctx.closePath();
-      ctx.clip();
-
-      // Screen background — Aureya app gradient
-      const grad = ctx.createLinearGradient(sX, sY, sX, sY + sH);
-      grad.addColorStop(0,   '#0d0d0d');
-      grad.addColorStop(0.4, '#111a10');
-      grad.addColorStop(1,   '#0a150a');
-      ctx.fillStyle = grad;
-      ctx.fillRect(sX, sY, sW, sH);
-
-      // Status bar dots (tiny)
-      ctx.fillStyle = 'rgba(255,255,255,0.35)';
-      ctx.font = `${sW * 0.07}px -apple-system, sans-serif`;
-      ctx.textAlign = 'left';
-      ctx.fillText('9:41', sX + sW * 0.06, sY + sH * 0.055);
-      ctx.textAlign = 'right';
-      ctx.fillText('●●●', sX + sW * 0.94, sY + sH * 0.055);
-
-      // App wordmark
-      ctx.textAlign = 'center';
-      ctx.font = `700 ${sW * 0.17}px Georgia, serif`;
-      ctx.fillStyle = '#c8ff5a';
-      ctx.shadowColor = 'rgba(200,255,90,0.4)';
-      ctx.shadowBlur = sW * 0.08;
-      ctx.fillText(appName, sX + sW / 2, sY + sH * 0.16);
-      ctx.shadowBlur = 0;
-
-      // Tagline under wordmark
-      ctx.font = `400 ${sW * 0.09}px -apple-system, sans-serif`;
-      ctx.fillStyle = 'rgba(255,255,255,0.45)';
-      ctx.fillText('AI skincare for sensitive skin', sX + sW / 2, sY + sH * 0.225);
-
-      // Fake skin scan card
-      const cX = sX + sW * 0.08;
-      const cY = sY + sH * 0.27;
-      const cW = sW * 0.84;
-      const cH = sH * 0.28;
-      const cR = sW * 0.05;
-      ctx.beginPath();
-      ctx.moveTo(cX + cR, cY);
-      ctx.lineTo(cX + cW - cR, cY);
-      ctx.quadraticCurveTo(cX + cW, cY, cX + cW, cY + cR);
-      ctx.lineTo(cX + cW, cY + cH - cR);
-      ctx.quadraticCurveTo(cX + cW, cY + cH, cX + cW - cR, cY + cH);
-      ctx.lineTo(cX + cR, cY + cH);
-      ctx.quadraticCurveTo(cX, cY + cH, cX, cY + cH - cR);
-      ctx.lineTo(cX, cY + cR);
-      ctx.quadraticCurveTo(cX, cY, cX + cR, cY);
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(200,255,90,0.08)';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(200,255,90,0.25)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      // Scan icon (circle with cross hairs)
-      const icX = sX + sW * 0.3;
-      const icY = cY + cH * 0.38;
-      const icR = sW * 0.08;
-      ctx.beginPath();
-      ctx.arc(icX, icY, icR, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(200,255,90,0.6)';
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(icX - icR * 0.6, icY);
-      ctx.lineTo(icX + icR * 0.6, icY);
-      ctx.moveTo(icX, icY - icR * 0.6);
-      ctx.lineTo(icX, icY + icR * 0.6);
-      ctx.stroke();
-
-      ctx.textAlign = 'left';
-      ctx.font = `600 ${sW * 0.1}px -apple-system, sans-serif`;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText('Skin Analysis', sX + sW * 0.44, cY + cH * 0.33);
-      ctx.font = `400 ${sW * 0.08}px -apple-system, sans-serif`;
-      ctx.fillStyle = 'rgba(200,255,90,0.8)';
-      ctx.fillText('Scan now →', sX + sW * 0.44, cY + cH * 0.55);
-
-      // Barrier score bar
-      ctx.textAlign = 'left';
-      ctx.font = `400 ${sW * 0.08}px -apple-system, sans-serif`;
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      ctx.fillText('Barrier score', sX + sW * 0.1, cY + cH * 0.8);
-      ctx.fillStyle = 'rgba(200,255,90,0.9)';
-      ctx.fillText('74 / 100', sX + sW * 0.56, cY + cH * 0.8);
-
-      // Two mini product pills
-      const pill = (px, py, label) => {
-        const pw = sW * 0.38, ph = sH * 0.065, pr = ph / 2;
-        ctx.beginPath();
-        ctx.moveTo(px + pr, py);
-        ctx.lineTo(px + pw - pr, py);
-        ctx.quadraticCurveTo(px + pw, py, px + pw, py + pr);
-        ctx.lineTo(px + pw, py + ph - pr);
-        ctx.quadraticCurveTo(px + pw, py + ph, px + pw - pr, py + ph);
-        ctx.lineTo(px + pr, py + ph);
-        ctx.quadraticCurveTo(px, py + ph, px, py + ph - pr);
-        ctx.lineTo(px, py + pr);
-        ctx.quadraticCurveTo(px, py, px + pr, py);
-        ctx.closePath();
-        ctx.fillStyle = 'rgba(255,255,255,0.07)';
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-        ctx.lineWidth = 0.8;
-        ctx.stroke();
-        ctx.textAlign = 'center';
-        ctx.font = `500 ${sW * 0.078}px -apple-system, sans-serif`;
-        ctx.fillStyle = 'rgba(255,255,255,0.75)';
-        ctx.fillText(label, px + pw / 2, py + ph * 0.67);
-      };
-      pill(sX + sW * 0.06, cY + cH + sH * 0.03, 'Routine');
-      pill(sX + sW * 0.55, cY + cH + sH * 0.03, 'Products');
-
-      // Bottom nav bar
-      const navY = sY + sH * 0.88;
-      ctx.fillStyle = 'rgba(255,255,255,0.08)';
-      ctx.fillRect(sX, navY, sW, sH * 0.12);
-      const navIcons = ['⌂', '◎', '☆', '⚙'];
-      navIcons.forEach((ic, i) => {
-        ctx.textAlign = 'center';
-        ctx.font = `${sW * 0.11}px -apple-system, sans-serif`;
-        ctx.fillStyle = i === 0 ? '#c8ff5a' : 'rgba(255,255,255,0.3)';
-        ctx.fillText(ic, sX + sW * (0.15 + i * 0.23), navY + sH * 0.075);
-      });
-
-      ctx.restore(); // end screen clip
-
-      // Dynamic island / notch pill
-      ctx.save();
+      // Notch
+      const notchW = phoneW * 0.4;
+      const notchH = phoneW * 0.08;
       ctx.fillStyle = '#000000';
       ctx.beginPath();
-      const diW = phoneW * 0.35, diH = phoneH * 0.022;
-      const diX = phoneX + (phoneW - diW) / 2;
-      const diY = phoneY + phoneH * 0.008;
-      ctx.roundRect(diX, diY, diW, diH, diH / 2);
+      ctx.moveTo(phoneX + (phoneW - notchW) / 2 + notchH * 0.3, phoneY + bezelSize);
+      ctx.lineTo(phoneX + (phoneW + notchW) / 2 - notchH * 0.3, phoneY + bezelSize);
+      ctx.quadraticCurveTo(phoneX + (phoneW + notchW) / 2, phoneY + bezelSize, phoneX + (phoneW + notchW) / 2, phoneY + bezelSize + notchH * 0.6);
+      ctx.quadraticCurveTo(phoneX + (phoneW + notchW) / 2, phoneY + bezelSize + notchH, phoneX + (phoneW + notchW) / 2 - notchH * 0.3, phoneY + bezelSize + notchH);
+      ctx.lineTo(phoneX + (phoneW - notchW) / 2 + notchH * 0.3, phoneY + bezelSize + notchH);
+      ctx.quadraticCurveTo(phoneX + (phoneW - notchW) / 2, phoneY + bezelSize + notchH, phoneX + (phoneW - notchW) / 2, phoneY + bezelSize + notchH * 0.6);
+      ctx.quadraticCurveTo(phoneX + (phoneW - notchW) / 2, phoneY + bezelSize, phoneX + (phoneW - notchW) / 2 + notchH * 0.3, phoneY + bezelSize);
       ctx.fill();
-      ctx.restore();
 
-      // Power button (right side)
-      ctx.save();
-      ctx.fillStyle = '#222222';
-      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-      ctx.lineWidth = 1;
-      const btnH = phoneH * 0.1;
-      ctx.beginPath();
-      ctx.roundRect(phoneX + phoneW - 3, phoneY + phoneH * 0.28, 4, btnH, 2);
-      ctx.fill(); ctx.stroke();
-      ctx.restore();
+      // Screen area
+      const screenX = phoneX + bezelSize;
+      const screenY = phoneY + bezelSize;
+      const screenW = phoneW - bezelSize * 2;
+      const screenH = phoneH - bezelSize * 2;
 
-      // Volume buttons (left side)
-      [0.18, 0.27].forEach(offset => {
-        ctx.save();
-        ctx.fillStyle = '#222222';
-        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.roundRect(phoneX - 3, phoneY + phoneH * offset, 4, phoneH * 0.07, 2);
-        ctx.fill(); ctx.stroke();
-        ctx.restore();
-      });
+      // App screen background gradient (Aureya teal-to-cream)
+      const gradient = ctx.createLinearGradient(screenX, screenY, screenX, screenY + screenH);
+      gradient.addColorStop(0, '#0d3a3a');
+      gradient.addColorStop(1, '#f5f0ea');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(screenX, screenY, screenW, screenH);
 
-      // "link in bio ↑" text label above phone
-      ctx.save();
-      ctx.textAlign = 'center';
-      ctx.font = `700 ${W * 0.042}px -apple-system, "DM Sans", sans-serif`;
+      // Status bar (top)
+      ctx.fillStyle = '#0d3a3a';
+      ctx.fillRect(screenX, screenY, screenW, screenH * 0.08);
+      ctx.font = `${screenW * 0.06}px -apple-system, sans-serif`;
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'right';
+      ctx.fillText('9:41', screenX + screenW - screenW * 0.06, screenY + screenH * 0.055);
+
+      // App header
+      ctx.fillStyle = '#0d3a3a';
+      ctx.fillRect(screenX, screenY + screenH * 0.08, screenW, screenH * 0.12);
+      ctx.font = `bold ${screenW * 0.1}px -apple-system, sans-serif`;
       ctx.fillStyle = '#c8ff5a';
-      ctx.shadowColor = 'rgba(0,0,0,0.7)';
-      ctx.shadowBlur = 12;
-      ctx.fillText('link in bio ↑', phoneX + phoneW / 2, phoneY - H * 0.02);
-      ctx.restore();
+      ctx.textAlign = 'center';
+      ctx.fillText('aureya', screenX + screenW / 2, screenY + screenH * 0.17);
+
+      // Main content area - skincare routine cards
+      const cardStartY = screenY + screenH * 0.22;
+      const cardH = screenH * 0.18;
+      const cardGap = screenH * 0.02;
+
+      // Card 1: Morning Routine
+      ctx.fillStyle = 'rgba(200, 255, 90, 0.15)';
+      ctx.fillRect(screenX + screenW * 0.05, cardStartY, screenW * 0.9, cardH);
+      ctx.fillStyle = '#0d3a3a';
+      ctx.font = `bold ${screenW * 0.065}px -apple-system, sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.fillText('Morning Routine', screenX + screenW * 0.1, cardStartY + cardH * 0.3);
+      ctx.font = `${screenW * 0.045}px -apple-system, sans-serif`;
+      ctx.fillStyle = 'rgba(13, 58, 58, 0.7)';
+      ctx.fillText('Cleanser · Toner · SPF', screenX + screenW * 0.1, cardStartY + cardH * 0.6);
+
+      // Card 2: Night Routine
+      ctx.fillStyle = 'rgba(200, 255, 90, 0.15)';
+      ctx.fillRect(screenX + screenW * 0.05, cardStartY + cardH + cardGap, screenW * 0.9, cardH);
+      ctx.fillStyle = '#0d3a3a';
+      ctx.font = `bold ${screenW * 0.065}px -apple-system, sans-serif`;
+      ctx.fillText('Night Routine', screenX + screenW * 0.1, cardStartY + cardH + cardGap + cardH * 0.3);
+      ctx.font = `${screenW * 0.045}px -apple-system, sans-serif`;
+      ctx.fillStyle = 'rgba(13, 58, 58, 0.7)';
+      ctx.fillText('Oil cleanser · Serum · Moisturizer', screenX + screenW * 0.1, cardStartY + cardH + cardGap + cardH * 0.6);
+
+      // CTA Button
+      const btnY = cardStartY + (cardH + cardGap) * 2 + screenH * 0.03;
+      const btnW = screenW * 0.85;
+      const btnH = screenH * 0.08;
+      ctx.fillStyle = '#c8ff5a';
+      ctx.beginPath();
+      ctx.moveTo(screenX + (screenW - btnW) / 2 + btnH * 0.15, btnY);
+      ctx.lineTo(screenX + (screenW + btnW) / 2 - btnH * 0.15, btnY);
+      ctx.quadraticCurveTo(screenX + (screenW + btnW) / 2, btnY, screenX + (screenW + btnW) / 2, btnY + btnH * 0.3);
+      ctx.lineTo(screenX + (screenW + btnW) / 2, btnY + btnH - btnH * 0.3);
+      ctx.quadraticCurveTo(screenX + (screenW + btnW) / 2, btnY + btnH, screenX + (screenW + btnW) / 2 - btnH * 0.15, btnY + btnH);
+      ctx.lineTo(screenX + (screenW - btnW) / 2 + btnH * 0.15, btnY + btnH);
+      ctx.quadraticCurveTo(screenX + (screenW - btnW) / 2, btnY + btnH, screenX + (screenW - btnW) / 2, btnY + btnH - btnH * 0.3);
+      ctx.lineTo(screenX + (screenW - btnW) / 2, btnY + btnH * 0.3);
+      ctx.quadraticCurveTo(screenX + (screenW - btnW) / 2, btnY, screenX + (screenW - btnW) / 2 + btnH * 0.15, btnY);
+      ctx.fill();
+      ctx.fillStyle = '#0d3a3a';
+      ctx.font = `bold ${screenW * 0.06}px -apple-system, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('Get Personalized Plan', screenX + screenW / 2, btnY + btnH * 0.58);
+
+      // Home indicator (bottom)
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.fillRect(screenX + screenW * 0.35, screenY + screenH - screenW * 0.06, screenW * 0.3, screenW * 0.025);
+
+      // Phone shadow for depth
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+      ctx.beginPath();
+      ctx.ellipse(phoneX + phoneW / 2, phoneY + phoneH + phoneW * 0.05, phoneW * 0.45, phoneW * 0.08, 0, 0, Math.PI * 2);
+      ctx.fill();
 
       resolve(canvas.toDataURL('image/jpeg', 0.88));
     };
@@ -3477,43 +3385,6 @@ async function compositeTextOnImage(imageUrl, text, slideIndex, slideLabel) {
       lines.forEach((l, li) => {
         ctx.fillText(l, xAnchor, startY + li * lineHeight);
       });
-
-      // ── Stage label pill (e.g. "Week 1 — calming") ───────────────────
-      if (slideLabel && slideLabel.trim()) {
-        const labelFontSize = Math.round(canvasW * 0.038);
-        ctx.font = `600 ${labelFontSize}px -apple-system, "Helvetica Neue", Arial, sans-serif`;
-        const labelText = slideLabel.trim();
-        const textW = ctx.measureText(labelText).width;
-        const padX = labelFontSize * 0.9;
-        const padY = labelFontSize * 0.55;
-        const pillW = textW + padX * 2;
-        const pillH = labelFontSize + padY * 2;
-        const pillX = (canvasW - pillW) / 2;
-        const pillY = canvasH * 0.895 - pillH / 2;
-        const pillR = pillH / 2;
-
-        // Pill background
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = 'rgba(8,8,8,0.72)';
-        ctx.beginPath();
-        ctx.moveTo(pillX + pillR, pillY);
-        ctx.lineTo(pillX + pillW - pillR, pillY);
-        ctx.quadraticCurveTo(pillX + pillW, pillY, pillX + pillW, pillY + pillR);
-        ctx.lineTo(pillX + pillW, pillY + pillH - pillR);
-        ctx.quadraticCurveTo(pillX + pillW, pillY + pillH, pillX + pillW - pillR, pillY + pillH);
-        ctx.lineTo(pillX + pillR, pillY + pillH);
-        ctx.quadraticCurveTo(pillX, pillY + pillH, pillX, pillY + pillH - pillR);
-        ctx.lineTo(pillX, pillY + pillR);
-        ctx.quadraticCurveTo(pillX, pillY, pillX + pillR, pillY);
-        ctx.closePath();
-        ctx.fill();
-
-        // Pill text
-        ctx.textAlign = 'center';
-        ctx.fillStyle = 'rgba(245,242,236,0.9)';
-        ctx.fillText(labelText, canvasW / 2, pillY + padY + labelFontSize * 0.85);
-      }
 
       resolve(canvas.toDataURL('image/jpeg', 0.85));
     };
@@ -3637,6 +3508,335 @@ function updateTikTokBtn(connected) {
     btn.href = '/api/tiktok-auth';
   }
 }
+
+// ============== VIDEO GENERATION ==============
+
+let currentVideoUrl = null;
+let selectedVideoAccountIndex = null;
+
+const videoLog = (msg, type = 'info') => {
+  const el = document.getElementById('video-log');
+  if (!el) return;
+  const div = document.createElement('div');
+  const colors = { info: '#9aa', ok: '#c8ff5a', err: '#ff6b6b', warn: '#ffb84d' };
+  div.style.color = colors[type] || colors.info;
+  div.textContent = `> ${msg}`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+};
+
+const getElevenKey = () => {
+  const stored = localStorage.getItem('larry-eleven-key') || '';
+  const input = document.getElementById('video-eleven-key')?.value || '';
+  return input || stored;
+};
+
+// Persist eleven key on input
+document.addEventListener('DOMContentLoaded', () => {
+  const stored = localStorage.getItem('larry-eleven-key');
+  if (stored) {
+    const input = document.getElementById('video-eleven-key');
+    if (input) input.value = stored;
+  }
+  const elevenInput = document.getElementById('video-eleven-key');
+  if (elevenInput) {
+    elevenInput.addEventListener('change', (e) => {
+      localStorage.setItem('larry-eleven-key', e.target.value);
+    });
+  }
+});
+
+async function previewVoice() {
+  const text = document.getElementById('video-hook').value.trim();
+  if (!text) { showToast('Enter a hook first', 'error'); return; }
+  const voiceId = document.getElementById('video-voice').value;
+  const elevenKey = getElevenKey();
+  if (!elevenKey) { showToast('Add ElevenLabs API key', 'error'); return; }
+
+  const btn = document.getElementById('preview-voice-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generating...';
+  videoLog('Generating voice preview...', 'info');
+
+  try {
+    const res = await fetch('/api/elevenlabs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-eleven-key': elevenKey },
+      body: JSON.stringify({ voice_id: voiceId, text })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      throw new Error(data.error?.detail?.message || data.error?.message || JSON.stringify(data.error || data));
+    }
+    if (!data.audio_base64) throw new Error('No audio returned');
+
+    const audio = document.getElementById('voice-preview-audio');
+    audio.src = `data:${data.content_type || 'audio/mpeg'};base64,${data.audio_base64}`;
+    audio.style.display = 'block';
+    audio.play();
+    videoLog('Voice preview ready ✓', 'ok');
+  } catch (e) {
+    videoLog('Voice preview failed: ' + e.message, 'err');
+    showToast('Voice preview failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '▶ Preview voice';
+  }
+}
+
+function renderVideoAccountSelector() {
+  const container = document.getElementById('video-account-selector');
+  if (!container) return;
+  if (!connectedAccounts || connectedAccounts.length === 0) {
+    container.innerHTML = '<div style="font-size:13px;color:var(--muted);">No accounts yet — add one in the Accounts tab.</div>';
+    return;
+  }
+  container.innerHTML = connectedAccounts.map((acc, i) => `
+    <button class="btn ${selectedVideoAccountIndex === i ? 'btn-primary' : ''}"
+            onclick="selectVideoAccount(${i})"
+            style="font-size:13px;">
+      ${acc.label || 'Account ' + (i+1)}
+    </button>
+  `).join('');
+}
+
+function selectVideoAccount(i) {
+  selectedVideoAccountIndex = i;
+  renderVideoAccountSelector();
+}
+
+async function generateTalkingVideo() {
+  const text = document.getElementById('video-hook').value.trim();
+  if (!text) { showToast('Enter a hook', 'error'); return; }
+  if (selectedVideoAccountIndex === null) { showToast('Select an account first', 'error'); return; }
+
+  const acc = connectedAccounts[selectedVideoAccountIndex];
+  const voiceId = document.getElementById('video-voice').value;
+  const elevenKey = getElevenKey();
+  const falKey = getFalKey();
+
+  if (!elevenKey) { showToast('ElevenLabs API key required', 'error'); return; }
+  if (!falKey) { showToast('FAL API key required (Setup tab)', 'error'); return; }
+
+  const btn = document.getElementById('gen-video-btn');
+  btn.disabled = true;
+  btn.textContent = '🎬 Generating...';
+  document.getElementById('video-output-card').style.display = 'none';
+
+  try {
+    // ===== STEP 1: Get/generate character image URL =====
+    videoLog('Step 1/4: Preparing character image...', 'info');
+    let characterImageUrl;
+
+    if (acc.baseImageUrl && acc.baseImageUrl.startsWith('http')) {
+      videoLog('Using uploaded base image', 'info');
+      characterImageUrl = acc.baseImageUrl;
+    } else {
+      // Generate a character via FAL (uses your fal.js contract: endpoint + input)
+      videoLog('Generating character image with FLUX + LoRA...', 'info');
+      const charPrompt = `aureyaskin2, casual selfie portrait of a woman, looking directly at camera, natural lighting, real skin texture visible, no makeup, authentic UGC selfie aesthetic, portrait orientation 9:16`;
+
+      const charRes = await fetch('/api/fal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-fal-key': falKey },
+        body: JSON.stringify({
+          endpoint: 'fal-ai/flux-general',
+          input: {
+            prompt: charPrompt,
+            negative_prompt: 'cinematic, professional photography, studio lighting, oversaturated, plastic skin',
+            image_size: 'portrait_16_9',
+            num_inference_steps: 28,
+            guidance_scale: 3.5,
+            loras: acc.loraPath ? [{ path: acc.loraPath, scale: 0.85 }] : []
+          }
+        })
+      });
+      const charData = await charRes.json();
+      if (!charRes.ok || charData.error) {
+        throw new Error('Character gen: ' + (charData.error || JSON.stringify(charData)));
+      }
+      if (!charData.images?.[0]?.url) throw new Error('Character gen returned no image');
+      characterImageUrl = charData.images[0].url;
+      videoLog('Character image ready ✓', 'ok');
+    }
+
+    // ===== STEP 2: Generate voice with ElevenLabs =====
+    videoLog('Step 2/4: Generating voice with ElevenLabs...', 'info');
+    const voiceRes = await fetch('/api/elevenlabs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-eleven-key': elevenKey },
+      body: JSON.stringify({ voice_id: voiceId, text })
+    });
+    const voiceData = await voiceRes.json();
+    if (!voiceRes.ok || voiceData.error) {
+      throw new Error('ElevenLabs: ' + (voiceData.error?.detail?.message || voiceData.error?.message || JSON.stringify(voiceData.error || voiceData)));
+    }
+    if (!voiceData.audio_base64) throw new Error('ElevenLabs returned no audio');
+    videoLog('Voice generated ✓', 'ok');
+
+    // ===== STEP 3: Upload audio to Vercel Blob (so FAL can fetch it) =====
+    videoLog('Step 3/4: Uploading audio for lip-sync...', 'info');
+    const audioDataUrl = `data:${voiceData.content_type || 'audio/mpeg'};base64,${voiceData.audio_base64}`;
+    const audioUploadRes = await fetch('/api/upload-slides', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ images: [audioDataUrl] })
+    });
+    const audioUploadData = await audioUploadRes.json();
+    if (!audioUploadRes.ok || audioUploadData.error) {
+      throw new Error('Audio upload: ' + (audioUploadData.error || 'unknown'));
+    }
+    const audioUrl = audioUploadData.urls?.[0];
+    if (!audioUrl) throw new Error('No audio URL returned');
+    videoLog('Audio uploaded: ' + audioUrl.slice(0, 50) + '...', 'ok');
+
+    // ===== STEP 4: FAL sync-lipsync (async mode — long job) =====
+    videoLog('Step 4/4: Submitting lip-sync job...', 'info');
+    const submitRes = await fetch('/api/fal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-fal-key': falKey },
+      body: JSON.stringify({
+        action: 'submit',
+        endpoint: 'fal-ai/sync-lipsync',
+        input: {
+          video_url: characterImageUrl,
+          audio_url: audioUrl,
+          model: 'lipsync-1.9.0-beta',
+          sync_mode: 'cut_off'
+        }
+      })
+    });
+    const submitData = await submitRes.json();
+    if (!submitRes.ok || !submitData.request_id) {
+      throw new Error('Lip-sync submit: ' + (submitData.error || JSON.stringify(submitData)));
+    }
+    const reqId = submitData.request_id;
+    videoLog(`Lip-sync queued: ${reqId.slice(0, 8)}... (this takes 60-90s)`, 'info');
+
+    // Poll client-side — every 5s, up to 4 min total
+    let videoResult = null;
+    for (let i = 0; i < 48; i++) {
+      await new Promise(r => setTimeout(r, 5000));
+
+      const pollRes = await fetch('/api/fal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-fal-key': falKey },
+        body: JSON.stringify({
+          action: 'result',
+          endpoint: 'fal-ai/sync-lipsync',
+          request_id: reqId
+        })
+      });
+      const pollData = await pollRes.json();
+
+      // Done
+      if (pollData.video?.url) {
+        videoResult = pollData;
+        break;
+      }
+      // Failed
+      if (pollData.status === 'FAILED' || pollData.error) {
+        throw new Error('Lip-sync failed: ' + (pollData.error || JSON.stringify(pollData)));
+      }
+      // Still going
+      if (i % 3 === 0) videoLog(`Still syncing... ${(i+1)*5}s elapsed`, 'info');
+    }
+
+    if (!videoResult?.video?.url) {
+      throw new Error('Lip-sync timed out after 4 min');
+    }
+
+    currentVideoUrl = videoResult.video.url;
+    videoLog('Video ready ✓✓✓', 'ok');
+    videoLog('URL: ' + currentVideoUrl.slice(0, 60) + '...', 'info');
+
+    // Show output
+    const videoEl = document.getElementById('video-output');
+    videoEl.src = currentVideoUrl;
+    document.getElementById('video-output-card').style.display = 'block';
+    showToast('Video generated!', 'success');
+
+  } catch (e) {
+    videoLog('FAILED: ' + e.message, 'err');
+    showToast('Video generation failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🎬 Generate talking video';
+  }
+}
+
+async function downloadVideo() {
+  if (!currentVideoUrl) return;
+  try {
+    const res = await fetch(currentVideoUrl);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `larry_video_${Date.now()}.mp4`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    showToast('Download failed: ' + e.message, 'error');
+  }
+}
+
+async function postVideoToTikTok() {
+  if (!currentVideoUrl) { showToast('No video to post', 'error'); return; }
+  if (selectedVideoAccountIndex === null) { showToast('Select an account', 'error'); return; }
+  const acc = connectedAccounts[selectedVideoAccountIndex];
+  if (!acc?.token) { showToast('Account not connected to TikTok', 'error'); return; }
+
+  const caption = document.getElementById('video-hook').value.trim();
+  const btn = document.getElementById('post-video-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Posting...';
+
+  try {
+    videoLog('Posting video to TikTok...', 'info');
+    const res = await fetch('https://open.tiktokapis.com/v2/post/publish/video/init/', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${acc.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        post_info: {
+          title: caption.slice(0, 150),
+          privacy_level: 'SELF_ONLY',
+          disable_duet: false,
+          disable_comment: false,
+          disable_stitch: false
+        },
+        source_info: {
+          source: 'PULL_FROM_URL',
+          video_url: currentVideoUrl
+        }
+      })
+    });
+    const data = await res.json();
+    if (data.error?.code && data.error.code !== 'ok') {
+      throw new Error(data.error.message || data.error.code);
+    }
+    videoLog('Video posted to TikTok ✓', 'ok');
+    showToast('Video posted!', 'success');
+  } catch (e) {
+    videoLog('Post failed: ' + e.message, 'err');
+    showToast('Post failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '↑ Post to TikTok';
+  }
+}
+
+// Hook into nav so account selector renders when video tab opens
+const _origNav = window.nav;
+window.nav = function(name) {
+  if (_origNav) _origNav(name);
+  if (name === 'video') {
+    setTimeout(renderVideoAccountSelector, 50);
+  }
+};
 </script>
 </body>
 </html>
